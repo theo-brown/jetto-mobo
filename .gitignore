@@ -1,0 +1,11 @@
+# Repository stuff
+.env
+
+# Python stuff
+*/__pycache__
+venv/
+
+# JETTO images and data
+jetto/templates/*
+jetto/images/*
+jetto/runs/*
