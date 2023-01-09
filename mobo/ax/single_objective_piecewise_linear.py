@@ -217,7 +217,7 @@ ax_client = AxClient(
             # 1. Initialization step
             GenerationStep(
                 model=Models.SOBOL,
-                num_trials=5,  # How many trials should be produced from this generation step
+                num_trials=1,  # How many trials should be produced from this generation step
             ),
             # 2. Bayesian optimization step
             GenerationStep(
