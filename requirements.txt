@@ -1,3 +1,4 @@
 jetto-tools
-ax-platform
+botorch
+torch
 netcdf4

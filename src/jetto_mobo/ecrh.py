@@ -1,4 +1,6 @@
-from typing import Iterable, Tuple
+from typing import Callable, Iterable
+
+import jetto_tools
 import numpy as np
 
 
@@ -14,12 +16,18 @@ def sum_of_gaussians(
     variances: Iterable[float],
     amplitudes: Iterable[float],
 ) -> np.ndarray:
+    if len(means) != len(variances) or len(means) != len(amplitudes):
+        raise ValueError(
+            "means, variances, amplitudes should be same length;"
+            f"got lengths [{len(means)}, {len(variances)}, {len(amplitudes)}]"
+        )
+
     return np.sum(
         [_gaussian(x, m, v, a) for m, v, a in zip(means, variances, amplitudes)], axis=0
     )
 
 
-def marsden_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
+def piecewise_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
     if len(parameters) != 12:
         raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
 
@@ -87,7 +95,41 @@ def marsden_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndarra
         turn_off_y,
     ]
 
-    return np.interp(x, node_xs, node_ys), [(x, y) for x, y in zip(node_xs, node_ys)]
+    return np.interp(x, node_xs, node_ys)
+
+
+def create_config(
+    template_directory: str,
+    config_directory: str,
+    ecrh_function: Callable[[Iterable[float]], Iterable[float]],
+) -> None:
+    """Create a new JETTO run configuration with the specified ECRH heating profile.
+
+    Parameters
+    ----------
+    template_directory : str
+        Directory of JETTO template run.
+    config_directory : str
+        Directory to store the new configuration in.
+    ecrh_function : Callable[[Iterable[float]], Iterable[float]]
+        A function that maps from normalised radius (XRHO) to ECRH power (QECE).
+    """
+
+    # Read exfile from template
+    template = jetto_tools.template.from_directory(template_directory)
+    exfile = jetto_tools.binary.read_binary_file(template.extra_files["jetto.ex"])
+
+    # Modify the exfile with the new ECRH profile
+    exfile["QECE"][0] = ecrh_function(exfile["XRHO"][0])
+
+    # Save the exfile
+    modified_exfile_path = f"{config_directory}/jetto.ex"
+    jetto_tools.binary.write_binary_exfile(exfile, modified_exfile_path)
+
+    # Create a new config with the modified exfile
+    config = jetto_tools.config.RunConfig(template)
+    config.exfile = modified_exfile_path
+    config.export(config_directory)
 
 
 if __name__ == "__main__":
@@ -100,7 +142,7 @@ if __name__ == "__main__":
     # Piecewise
     figure = go.Figure()
     for _ in range(5):
-        y, nodes = marsden_linear(x, parameters=rng.random(12))
+        y, nodes = piecewise_linear(x, parameters=rng.random(12))
         figure.add_trace(go.Scatter(x=x, y=y))
     figure.show()
 

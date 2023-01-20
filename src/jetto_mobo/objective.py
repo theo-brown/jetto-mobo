@@ -1,4 +1,5 @@
 import numpy as np
+from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
 
 
@@ -57,7 +58,11 @@ def f8(profiles: Dataset, timetraces: Dataset):
     return f7(profiles, timetraces, value=4)
 
 
-def combined_cost_function(profiles: Dataset, timetraces: Dataset):
+def combined_cost_function(path: str):
+    results = JettoResults(path=path)
+    profiles = results.load_profiles()
+    timetraces = results.load_timetraces()
+        
     return (
         0.5 * f1(profiles, timetraces)
         + 5 * f2(profiles, timetraces)
@@ -70,18 +75,16 @@ def combined_cost_function(profiles: Dataset, timetraces: Dataset):
 
 
 if __name__ == "__main__":
-    from jetto_tools.results import JettoResults
 
-    results = JettoResults(
-        path="/home/theo/Documents/cambridge/iib-project/data/jetto/benchmark"
-    )
-    profiles = results.load_profiles()
-    timetraces = results.load_timetraces()
+    path = "/home/theo/Documents/cambridge/iib-project/data/jetto/benchmark"
 
     print(
         "Benchmark combined cost function: "
-        f"{combined_cost_function(profiles, timetraces):3e}"
+        f"{combined_cost_function(path):3e}"
     )
+    results = JettoResults(path=path)
+    profiles = results.load_profiles()
+    timetraces = results.load_timetraces()
     print(
         "Benchmark individual cost functions: \n"
         f"\t f1: {f1(profiles, timetraces):3e} \n"
