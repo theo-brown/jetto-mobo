@@ -1,3 +1,5 @@
+from typing import Callable, Iterable, Union
+
 import numpy as np
 from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
@@ -58,11 +60,23 @@ def f8(profiles: Dataset, timetraces: Dataset):
     return f7(profiles, timetraces, value=4)
 
 
-def combined_cost_function(path: str):
+def scalar_cost_function(path: str) -> float:
+    """Weighted sum of cost functions for safety factor profile.
+
+    Parameters
+    ----------
+    path : str
+        Path to a JettoResults directory.
+
+    Returns
+    -------
+    float
+        Scalar cost of safety factor profile.
+    """
     results = JettoResults(path=path)
     profiles = results.load_profiles()
     timetraces = results.load_timetraces()
-        
+
     return (
         0.5 * f1(profiles, timetraces)
         + 5 * f2(profiles, timetraces)
@@ -74,25 +88,30 @@ def combined_cost_function(path: str):
     )
 
 
-if __name__ == "__main__":
+def vector_cost_function(path: str) -> Iterable[float]:
+    """Vector cost function for safety factor profile.
 
-    path = "/home/theo/Documents/cambridge/iib-project/data/jetto/benchmark"
+    Parameters
+    ----------
+    path : str
+        Path to a JettoResults directory.
 
-    print(
-        "Benchmark combined cost function: "
-        f"{combined_cost_function(path):3e}"
-    )
+    Returns
+    -------
+    Iterable[float]
+        Vector of costs of safety factor profile.
+    """
     results = JettoResults(path=path)
     profiles = results.load_profiles()
     timetraces = results.load_timetraces()
-    print(
-        "Benchmark individual cost functions: \n"
-        f"\t f1: {f1(profiles, timetraces):3e} \n"
-        f"\t f2: {f2(profiles, timetraces):3e} \n"
-        f"\t f3: {f3(profiles, timetraces):3e} \n"
-        f"\t f4: {f4(profiles, timetraces):3e} \n"
-        f"\t f5: {f5(profiles, timetraces):3e} \n"
-        f"\t f6: {f6(profiles, timetraces):3e} \n"
-        f"\t f7: {f7(profiles, timetraces):3e} \n"
-        f"\t f8: {f8(profiles, timetraces):3e} \n"
-    )
+
+    return [
+        f1(profiles, timetraces),
+        f2(profiles, timetraces),
+        f3(profiles, timetraces),
+        f4(profiles, timetraces),
+        f5(profiles, timetraces),
+        f6(profiles, timetraces),
+        f7(profiles, timetraces),
+        f8(profiles, timetraces),
+    ]

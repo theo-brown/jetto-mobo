@@ -1,5 +1,8 @@
-from typing import Callable, Iterable
+import asyncio
+import os
+from typing import Callable, Iterable, Union
 
+import jetto_subprocess
 import jetto_tools
 import numpy as np
 
@@ -108,7 +111,7 @@ def create_config(
     Parameters
     ----------
     template_directory : str
-        Directory of JETTO template run.
+        Directory of JETTO template run, used as a base to create the new configuration.
     config_directory : str
         Directory to store the new configuration in.
     ecrh_function : Callable[[Iterable[float]], Iterable[float]]
@@ -132,21 +135,53 @@ def create_config(
     config.export(config_directory)
 
 
-if __name__ == "__main__":
-    import plotly.graph_objects as go
+def get_cost(
+    ecrh_parameters: np.ndarray,
+    directory: str,
+    ecrh_function: Callable[(np.ndarray, np.ndarray), np.ndarray],
+    cost_function: Callable[str, Union[float, np.ndarray]],
+    jetto_template: str = "jetto/templates/spr45-v9",
+    jetto_image: str = "jetto/images/sim.v220922.sif",
+) -> np.ndarray:
+    """_summary_
 
-    rng = np.random.default_rng()
+    Parameters
+    ----------
+    ecrh_parameters : np.ndarray
+        A `b x n` array, where `b` is the number of JETTO runs (i.e. batch size) and `n` is the number of ECRH parameters.
+    directory : str
+        Root directory to store JETTO files in. Output of each run will be stored in 'directory/{i}', for i=1,...,n.
+    ecrh_function : Callable[(Iterable[float], Iterable[float]), Iterable[float]]
+        A function that takes normalised radius (XRHO) as first argument, `n` ECRH parameters as second argument, and returns ECRH power (QECE).
+    cost_function : Callable[str, Union[float, Iterable[float]]]
+        A function that takes a JETTO output directory and returns a scalar or vector cost associated with the ECRH profile.
+    jetto_template : str, default "jetto/templates/spr45-v9"
+        Directory of JETTO template run, used as a base to create the new JETTO configurations.
+    jetto_image : str, default "jetto/images/sim.v220922.sif"
+        Path to the JETTO .sif Singularity container image.
 
-    x = np.linspace(0, 1, 100)
+    Returns
+    -------
+    np.ndarray
+        The value of cost_function when the ECRH is set according to the parameters.
+        If cost_function returns a scalar, returns a `b x 1` array.
+        If cost_function returns a vector of length `c`, returns a `b x c` array.
+    """
+    config = {}
+    for i in range(ecrh_parameters.shape[0]):
+        run_directory = f"{directory}/{i}"
+        os.makedirs(run_directory)
 
-    # Piecewise
-    figure = go.Figure()
-    for _ in range(5):
-        y, nodes = piecewise_linear(x, parameters=rng.random(12))
-        figure.add_trace(go.Scatter(x=x, y=y))
-    figure.show()
+        create_config(
+            jetto_template,
+            run_directory,
+            lambda xrho: ecrh_function(xrho, ecrh_parameters[i]),
+        )
 
-    # Sum of Gaussians
-    y = sum_of_gaussians(x, means=[0.1, 0.6], variances=[0.001, 0.1], amplitudes=[5, 2])
-    figure = go.Figure(go.Scatter(x=x, y=y))
-    figure.show()
+        config[str(i)] = run_directory
+
+    asyncio.run(jetto_subprocess.run_many(jetto_image, config))
+
+    return np.array(
+        [cost_function(output_directory) for output_directory in config.values()]
+    )

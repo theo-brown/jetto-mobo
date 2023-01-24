@@ -1,12 +1,7 @@
-import os
-from typing import Iterable
-
-import ecrh
-import h5py
-import jetto_singularity
-import jetto_tools
-import objective
+import jetto_subprocess
+import plot
 import torch
+import utils
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 from botorch.models import SingleTaskGP  # Maybe use a different one?
@@ -15,28 +10,28 @@ from botorch.sampling.normal import SobolQMCNormalSampler
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 # Constants
-N_INITIAL_POINTS = 3
 N_PARAMETERS = 12  # ecrh.piecewise_linear has 12 parameters
-BATCH_SIZE = 2
+BATCH_SIZE = 5
 NUM_RESTARTS = 10
 RAW_SAMPLES = 512
 N_MC_SAMPLES = 256
+OUTPUT_FILENAME = "jetto_mobo.hdf5"
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.double
 
 # Load data
-output_file = h5py.File("jetto_mobo.hdf5", "r+")
-x_train = torch.tensor(
-    output_file["initialisation/ecrh_parameters"][:], device=device, dtype=dtype
+ecrh_parameters = utils.load_tensor(
+    OUTPUT_FILENAME, "initialisation/ecrh_parameters", device=device, dtype=dtype
 )
-y_train = torch.tensor(
-    output_file["initialisation/cost"][:], device=device, dtype=dtype
+cost = utils.load_tensor(
+    OUTPUT_FILENAME, "initialisation/cost", device=device, dtype=dtype
 )
 
 # Initialise surrogate model
-model = SingleTaskGP(x_train, y_train)
+# BoTorch performs maximisation, so need to use -cost
+model = SingleTaskGP(ecrh_parameters, -cost)
 
 # Fit the model
 mll = ExactMarginalLogLikelihood(model.likelihood, model)
@@ -50,7 +45,7 @@ fit_gpytorch_mll(mll)
 sampler = SobolQMCNormalSampler(sample_shape=torch.Size([N_MC_SAMPLES]))
 qNEI = qNoisyExpectedImprovement(
     model=model,
-    X_baseline=x_train,
+    X_baseline=ecrh_parameters,
     sampler=sampler,
 )
 
@@ -59,14 +54,12 @@ bounds = torch.tensor(
 )
 
 # Select next input points
-# Uses scipy.minimize(method='L-BFGS-B') to maximise the acqf
-# L-BFGS is https://epubs.siam.org/doi/abs/10.1137/0916069
 # Use multistart optimisation:
 # - Draw RAW_SAMPLES from the domain (uses the sampler defined in the acqf)
 # - Calculate value of acqf, a, at each RAW_SAMPLES point
 # - Weight the RAW_SAMPLES by w = exp(eta * (a - mean(a))/std(a)) where eta is some temperature parameter
 # - Draw NUM_RESTARTS from RAW_SAMPLES according to w
-# - Perform local qNEI maximisation using L-BFGS-B around NUM_RESTARTS points
+# - Perform local qNEI maximisation using scipy.minimize(method='L-BFGS-B') around each of NUM_RESTARTS points
 # - Take largest qNEI from all NUM_RESTARTS points
 # Does this jointly over the whole q-batch to reduce wallclock time
 # General idea: RAW_SAMPLES is cheaper than NUM_RESTARTS because no local optimisation performed
@@ -75,16 +68,16 @@ bounds = torch.tensor(
 # For explanation, see
 # https://botorch.org/v/0.1.1/docs/optimization
 # https://github.com/pytorch/botorch/issues/366#issuecomment-581951153
-candidates, _ = optimize_acqf(
+new_ecrh_parameters, _ = optimize_acqf(
     acq_function=qNEI,
     bounds=bounds,
-    q=BATCH_SIZE,
-    raw_samples=RAW_SAMPLES,
-    num_restarts=NUM_RESTARTS,
+    q=BATCH_SIZE,  # Number of final points to generate
+    raw_samples=RAW_SAMPLES,  # Number of points to sample from acqf
+    num_restarts=NUM_RESTARTS,  # Number of starting points for multistart optimisation
     options={
-        "batch_limit": 5,
-        "maxiter": 200,
-    },  # Passed to scipy - need to check what these actually do
+        "batch_limit": 5,  # Batch size for local optimisation
+        "maxiter": 200,  # Max number of local optimisation iterations per batch
+    },
 )
-
-print(candidates)
+new_ecrh_parameters = new_ecrh_parameters.detach()
+print(new_ecrh_parameters)
