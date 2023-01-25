@@ -1,5 +1,3 @@
-from typing import Callable, Iterable, Union
-
 import numpy as np
 from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
@@ -60,58 +58,62 @@ def f8(profiles: Dataset, timetraces: Dataset):
     return f7(profiles, timetraces, value=4)
 
 
-def scalar_cost_function(path: str) -> float:
+def scalar_cost_function(path: str) -> np.ndarray:
     """Weighted sum of cost functions for safety factor profile.
 
     Parameters
     ----------
     path : str
-        Path to a JettoResults directory.
+        Path to a (converged) JettoResults directory.
 
     Returns
     -------
-    float
+    np.ndarray
         Scalar cost of safety factor profile.
     """
     results = JettoResults(path=path)
     profiles = results.load_profiles()
     timetraces = results.load_timetraces()
 
-    return (
-        0.5 * f1(profiles, timetraces)
-        + 5 * f2(profiles, timetraces)
-        + 6 * f3(profiles, timetraces)
-        + 10 * f5(profiles, timetraces)
-        + 10 * f6(profiles, timetraces)
-        + 1 * f7(profiles, timetraces)
-        + 2 * f8(profiles, timetraces)
+    return np.array(
+        [
+            0.5 * f1(profiles, timetraces)
+            + 5 * f2(profiles, timetraces)
+            + 6 * f3(profiles, timetraces)
+            + 10 * f5(profiles, timetraces)
+            + 10 * f6(profiles, timetraces)
+            + 1 * f7(profiles, timetraces)
+            + 2 * f8(profiles, timetraces)
+        ]
     )
 
 
-def vector_cost_function(path: str) -> Iterable[float]:
+def vector_cost_function(path: str) -> np.ndarray:
     """Vector cost function for safety factor profile.
 
     Parameters
     ----------
     path : str
-        Path to a JettoResults directory.
+        Path to a (converged) JettoResults directory.
 
     Returns
     -------
-    Iterable[float]
+    np.ndarray
         Vector of costs of safety factor profile.
     """
     results = JettoResults(path=path)
     profiles = results.load_profiles()
     timetraces = results.load_timetraces()
 
-    return [
-        f1(profiles, timetraces),
-        f2(profiles, timetraces),
-        f3(profiles, timetraces),
-        f4(profiles, timetraces),
-        f5(profiles, timetraces),
-        f6(profiles, timetraces),
-        f7(profiles, timetraces),
-        f8(profiles, timetraces),
-    ]
+    return np.array(
+        [
+            f1(profiles, timetraces),
+            f2(profiles, timetraces),
+            f3(profiles, timetraces),
+            f4(profiles, timetraces),
+            f5(profiles, timetraces),
+            f6(profiles, timetraces),
+            f7(profiles, timetraces),
+            f8(profiles, timetraces),
+        ]
+    )

@@ -1,10 +1,11 @@
 import asyncio
 import os
-from typing import Callable, Iterable, Union
+from typing import Callable, Iterable
 
-import jetto_subprocess
 import jetto_tools
 import numpy as np
+
+from jetto_mobo import jetto_subprocess
 
 
 def _gaussian(
@@ -111,11 +112,12 @@ def create_config(
     Parameters
     ----------
     template_directory : str
-        Directory of JETTO template run, used as a base to create the new configuration.
+        Directory of JETTO template run, used as a base to create the new configuration. Note: the template must have
+        `PTOTEC` set in `jetto.in`, which is used to normalise the ECRH power.
     config_directory : str
         Directory to store the new configuration in.
     ecrh_function : Callable[[Iterable[float]], Iterable[float]]
-        A function that maps from normalised radius (XRHO) to ECRH power (QECE).
+        A function that maps from normalised radius (XRHO, [0,1]) to normalised ECRH power (QECE, [0,1]).
     """
 
     # Read exfile from template
@@ -138,12 +140,14 @@ def create_config(
 def get_cost(
     ecrh_parameters: np.ndarray,
     directory: str,
-    ecrh_function: Callable[(np.ndarray, np.ndarray), np.ndarray],
-    cost_function: Callable[str, Union[float, np.ndarray]],
+    ecrh_function: Callable[[np.ndarray, np.ndarray], np.ndarray],
+    cost_function: Callable[[str], np.ndarray],
     jetto_template: str = "jetto/templates/spr45-v9",
     jetto_image: str = "jetto/images/sim.v220922.sif",
 ) -> np.ndarray:
-    """_summary_
+    """Compute the safety factor cost for each element in a batch array of ECRH parameters.
+
+    This function uses `jetto_subprocess.run_many` to asynchronously run a batch of JETTO runs, one for each element of the batch.
 
     Parameters
     ----------
@@ -153,8 +157,8 @@ def get_cost(
         Root directory to store JETTO files in. Output of each run will be stored in 'directory/{i}', for i=1,...,n.
     ecrh_function : Callable[(Iterable[float], Iterable[float]), Iterable[float]]
         A function that takes normalised radius (XRHO) as first argument, `n` ECRH parameters as second argument, and returns ECRH power (QECE).
-    cost_function : Callable[str, Union[float, Iterable[float]]]
-        A function that takes a JETTO output directory and returns a scalar or vector cost associated with the ECRH profile.
+    cost_function : Callable[str, np.ndarray]
+        A function that takes a JETTO output directory and returns a cost associated with the ECRH profile. Output shape `(c,)`.
     jetto_template : str, default "jetto/templates/spr45-v9"
         Directory of JETTO template run, used as a base to create the new JETTO configurations.
     jetto_image : str, default "jetto/images/sim.v220922.sif"
@@ -163,9 +167,8 @@ def get_cost(
     Returns
     -------
     np.ndarray
-        The value of cost_function when the ECRH is set according to the parameters.
-        If cost_function returns a scalar, returns a `b x 1` array.
-        If cost_function returns a vector of length `c`, returns a `b x c` array.
+        A `b x c` array containing the value of cost_function when the ECRH is set according to the parameters.
+        If JETTO run `i` failed, elements `[i, :]`  will be np.nan
     """
     config = {}
     for i in range(ecrh_parameters.shape[0]):
@@ -180,8 +183,8 @@ def get_cost(
 
         config[str(i)] = run_directory
 
-    asyncio.run(jetto_subprocess.run_many(jetto_image, config))
-
-    return np.array(
-        [cost_function(output_directory) for output_directory in config.values()]
-    )
+    results = asyncio.run(jetto_subprocess.run_many(jetto_image, config))
+    returncodes = [returncode for _, _, returncode in results]
+    costs = np.array([cost_function(output_directory) for output_directory in config.values()])
+    costs[np.nonzero(returncodes)] *= np.nan
+    return costs
