@@ -64,28 +64,34 @@ def scalar_cost_function(path: str) -> np.ndarray:
     Parameters
     ----------
     path : str
-        Path to a (converged) JettoResults directory.
+        Path to a JettoResults directory.
 
     Returns
     -------
     np.ndarray
-        Scalar cost of safety factor profile.
+        Scalar cost of safety factor profile. If the JETTO run did not converge, will be `np.nan`.
     """
-    results = JettoResults(path=path)
-    profiles = results.load_profiles()
-    timetraces = results.load_timetraces()
+    with open(f"{path}/jetto.status") as f:
+        status = f.read().strip().split(" : ")[-1]
 
-    return np.array(
-        [
-            0.5 * f1(profiles, timetraces)
-            + 5 * f2(profiles, timetraces)
-            + 6 * f3(profiles, timetraces)
-            + 10 * f5(profiles, timetraces)
-            + 10 * f6(profiles, timetraces)
-            + 1 * f7(profiles, timetraces)
-            + 2 * f8(profiles, timetraces)
-        ]
-    )
+    if status == "Completed successfully":
+        results = JettoResults(path=path)
+        profiles = results.load_profiles()
+        timetraces = results.load_timetraces()
+
+        return np.array(
+            [
+                0.5 * f1(profiles, timetraces)
+                + 5 * f2(profiles, timetraces)
+                + 6 * f3(profiles, timetraces)
+                + 10 * f5(profiles, timetraces)
+                + 10 * f6(profiles, timetraces)
+                + 1 * f7(profiles, timetraces)
+                + 2 * f8(profiles, timetraces)
+            ]
+        )
+    else:
+        return np.array([np.nan])
 
 
 def vector_cost_function(path: str) -> np.ndarray:
@@ -101,19 +107,29 @@ def vector_cost_function(path: str) -> np.ndarray:
     np.ndarray
         Vector of costs of safety factor profile.
     """
-    results = JettoResults(path=path)
-    profiles = results.load_profiles()
-    timetraces = results.load_timetraces()
+    with open(f"{path}/jetto.status") as f:
+        status = f.read().strip().split(" : ")[-1]
 
-    return np.array(
-        [
-            f1(profiles, timetraces),
-            f2(profiles, timetraces),
-            f3(profiles, timetraces),
-            f4(profiles, timetraces),
-            f5(profiles, timetraces),
-            f6(profiles, timetraces),
-            f7(profiles, timetraces),
-            f8(profiles, timetraces),
-        ]
-    )
+    if status == "Completed successfully":
+        results = JettoResults(path=path)
+        profiles = results.load_profiles()
+        timetraces = results.load_timetraces()
+        return np.array(
+            [
+                f1(profiles, timetraces),
+                f2(profiles, timetraces),
+                f3(profiles, timetraces),
+                f4(profiles, timetraces),
+                f5(profiles, timetraces),
+                f6(profiles, timetraces),
+                f7(profiles, timetraces),
+                f8(profiles, timetraces),
+            ]
+        )
+    else:
+        return np.full(8, np.nan)
+
+
+if __name__ == "__main__":
+    for i in range(3):
+        print(scalar_cost_function(f"jetto/runs/bayesopt/0/{i}"))

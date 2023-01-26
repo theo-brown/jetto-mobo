@@ -154,7 +154,7 @@ def get_cost(
     ecrh_parameters : np.ndarray
         A `b x n` array, where `b` is the number of JETTO runs (i.e. batch size) and `n` is the number of ECRH parameters.
     directory : str
-        Root directory to store JETTO files in. Output of each run will be stored in 'directory/{i}', for i=1,...,n.
+        Root directory to store JETTO files in. Output of each run will be stored in '{directory}/{i}', for i=1,...,n.
     ecrh_function : Callable[(Iterable[float], Iterable[float]), Iterable[float]]
         A function that takes normalised radius (XRHO) as first argument, `n` ECRH parameters as second argument, and returns ECRH power (QECE).
     cost_function : Callable[str, np.ndarray]
@@ -183,8 +183,6 @@ def get_cost(
 
         config[str(i)] = run_directory
 
-    results = asyncio.run(jetto_subprocess.run_many(jetto_image, config))
-    returncodes = [returncode for _, _, returncode in results]
-    costs = np.array([cost_function(output_directory) for output_directory in config.values()])
-    costs[np.nonzero(returncodes)] *= np.nan
-    return costs
+    asyncio.run(jetto_subprocess.run_many(jetto_image, config))
+
+    return np.array([cost_function(run_directory) for run_directory in config.values()])

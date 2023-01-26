@@ -10,9 +10,9 @@ from jetto_mobo import ecrh, objective, utils
 
 # Constants
 N_PARAMETERS = 12  # ecrh.piecewise_linear has 12 parameters
-N_INITIAL_EXPLORATION_POINTS = 5
-N_BAYESOPT_STEPS = 1
-BATCH_SIZE = 3  # Number of parallel JETTO to run
+N_INITIAL_EXPLORATION_POINTS = 6
+N_BAYESOPT_STEPS = 6
+BATCH_SIZE = 6  # Number of parallel JETTO to run
 NUM_RESTARTS = 10  # Used in acqf optimisation
 RAW_SAMPLES = 512  # Used in acqf optimisation
 N_MC_SAMPLES = 256  # Used in acqf optimisation
@@ -38,15 +38,15 @@ dtype = torch.double
 #     dtype=dtype,
 # )
 # utils.save_tensor(OUTPUT_FILENAME, "initialisation/cost", cost)
-ecrh_parameters = utils.load_tensor("jetto_mobo_old.hdf5", "initialisation/ecrh_parameters", device=device, dtype=dtype)
-cost = utils.load_tensor("jetto_mobo_old.hdf5", "initialisation/cost", device=device, dtype=dtype)
+ecrh_parameters = utils.load_tensor(OUTPUT_FILENAME, "initialisation/ecrh_parameters", device=device, dtype=dtype)
+cost = utils.load_tensor(OUTPUT_FILENAME, "initialisation/cost", device=device, dtype=dtype)
 
 # Bayesian optimisation
 for i in range(N_BAYESOPT_STEPS):
-    # If a run failed, it will produce a NaN cost. 
+    # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation, we instead set the cost to a very large number.
-    cost[torch.isnan(cost)] = 1e6
-    
+    cost[cost.isnan()] = 1e3
+
     # Initialise surrogate model
     # BoTorch performs maximisation, so need to use -cost
     model = SingleTaskGP(ecrh_parameters, -cost)
