@@ -1,3 +1,9 @@
+import argparse
+import logging
+import os
+from datetime import datetime
+from typing import Optional
+
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -8,49 +14,121 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from jetto_mobo import ecrh, objective, utils
 
-# Constants
-N_PARAMETERS = 12  # ecrh.piecewise_linear has 12 parameters
-N_INITIAL_EXPLORATION_POINTS = 6
-N_BAYESOPT_STEPS = 6
-BATCH_SIZE = 6  # Number of parallel JETTO to run
-NUM_RESTARTS = 10  # Used in acqf optimisation
-RAW_SAMPLES = 512  # Used in acqf optimisation
-N_MC_SAMPLES = 256  # Used in acqf optimisation
-OUTPUT_FILENAME = "jetto_mobo.hdf5"
+# Argparse
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--output_dir",
+    type=str,
+    default="YYYY-MM-DD-hhmmss",
+    help="Directory to store results in; a directory with the specified path will be created if it does not already exist.",
+)
+parser.add_argument(
+    "--n_bayesopt_steps", type=int, default=6, help="Number of BayesOpt steps."
+)
+parser.add_argument(
+    "--batch_size", type=int, default=5, help="Number of parallel JETTO runs."
+)
+parser.add_argument(
+    "--n_restarts",
+    type=int,
+    default=10,
+    help="Number of points for multistart optimisation.",
+)
+parser.add_argument(
+    "--raw_samples",
+    type=int,
+    default=512,
+    help="Number of samples to draw from acquisition function.",
+)
+parser.add_argument(
+    "--n_sobol_samples",
+    type=int,
+    default=256,
+    help="Passed to SobolQMCNormalSampler as `sample_shape`.",
+)
+parser.add_argument(
+    "--ecrh_function",
+    type=str,
+    choices=["piecewise_linear"],
+    default="piecewise_linear",
+    help="ECRH function to use.",
+)
+parser.add_argument(
+    "--cost_function",
+    type=str,
+    choices=["scalar"],
+    default="scalar",
+    help="Cost function to use.",
+)
+parser.add_argument(
+    "--jetto_fail_cost",
+    type=float,
+    default=1e3,
+    help="Value of cost function if JETTO fails.",
+)
+parser.add_argument(
+    "--jetto_timelimit",
+    type=Optional[float],
+    default=None,
+    help="Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.",
+)
+args = parser.parse_args()
+
+if args.ecrh_function == "piecewise_linear":
+    ecrh_function = ecrh.piecewise_linear
+    n_ecrh_parameters = 12
+
+if args.cost_function == "scalar":
+    cost_function = objective.scalar_cost_function
+    cost_dimension = 1
+
+if args.output_dir == "YYYY-MM-DD-hhmmss":
+    output_dir = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+else:
+    output_dir = args.output_dir
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+output_filename = f"{output_dir}/output.hdf5"
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.double
 
 # Gather initial data
-# ecrh_parameters = torch.rand(
-#     [N_INITIAL_EXPLORATION_POINTS, N_PARAMETERS], dtype=dtype, device=device
-# )
-# utils.save_tensor(OUTPUT_FILENAME, "initialisation/ecrh_parameters", ecrh_parameters)
-# cost = torch.tensor(
-#     ecrh.get_cost(
-#         ecrh_parameters,
-#         "jetto/runs/initial",
-#         ecrh.piecewise_linear,
-#         objective.scalar_cost_function,
-#     ),
-#     device=device,
-#     dtype=dtype,
-# )
-# utils.save_tensor(OUTPUT_FILENAME, "initialisation/cost", cost)
-ecrh_parameters = utils.load_tensor(OUTPUT_FILENAME, "initialisation/ecrh_parameters", device=device, dtype=dtype)
-cost = utils.load_tensor(OUTPUT_FILENAME, "initialisation/cost", device=device, dtype=dtype)
+# TODO: handle if none converged
+logging.info("Gathering initial data...")
+ecrh_parameters = torch.rand(
+    [args.batch_size, n_ecrh_parameters], dtype=dtype, device=device
+)
+utils.save_tensor(output_filename, "initialisation/ecrh_parameters", ecrh_parameters)
+cost = torch.tensor(
+    ecrh.get_cost(
+        ecrh_parameters,
+        f"{output_dir}/jetto/initial",
+        ecrh_function,
+        cost_function,
+    ),
+    device=device,
+    dtype=dtype,
+)
+utils.save_tensor(output_filename, "initialisation/cost", cost)
+# ecrh_parameters = utils.load_tensor(OUTPUT_FILENAME, "initialisation/ecrh_parameters", device=device, dtype=dtype)
+# cost = utils.load_tensor(OUTPUT_FILENAME, "initialisation/cost", device=device, dtype=dtype)
 
 # Bayesian optimisation
-for i in range(N_BAYESOPT_STEPS):
+logging.info("Starting BayesOpt...")
+for i in range(args.n_bayesopt_steps):
     # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation, we instead set the cost to a very large number.
-    cost[cost.isnan()] = 1e3
+    cost[cost.isnan()] = args.jetto_fail_cost
 
     # Initialise surrogate model
     # BoTorch performs maximisation, so need to use -cost
+    logging.info("Fitting surrogate model to observed costs...")
     model = SingleTaskGP(ecrh_parameters, -cost)
-
     # Fit the model
     mll = ExactMarginalLogLikelihood(model.likelihood, model)
     fit_gpytorch_mll(mll)
@@ -60,11 +138,10 @@ for i in range(N_BAYESOPT_STEPS):
     # Sobol is a quasirandom number generation scheme - generates low-discrepancy sequences
     # (low-discrepancy = on average, samples are evenly distributed to cover the space)
     # BoTorch recommends using Sobol because it produces lower variance gradient estimates with much fewer samples [https://botorch.org/docs/samplers]
-    sampler = SobolQMCNormalSampler(sample_shape=torch.Size([N_MC_SAMPLES]))
     qNEI = qNoisyExpectedImprovement(
         model=model,
         X_baseline=ecrh_parameters,
-        sampler=sampler,
+        sampler=SobolQMCNormalSampler(sample_shape=torch.Size([args.n_sobol_samples])),
     )
 
     # Select next ECRH parameters
@@ -82,14 +159,17 @@ for i in range(N_BAYESOPT_STEPS):
     # For explanation, see
     # https://botorch.org/v/0.1.1/docs/optimization
     # https://github.com/pytorch/botorch/issues/366#issuecomment-581951153
+    logging.info("Selecting candidates using acquisition function...")
     new_ecrh_parameters, _ = optimize_acqf(
         acq_function=qNEI,
         bounds=torch.tensor(
-            [[0] * N_PARAMETERS, [1] * N_PARAMETERS], dtype=dtype, device=device
+            [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
+            dtype=dtype,
+            device=device,
         ),
-        q=BATCH_SIZE,  # Number of final points to generate
-        raw_samples=RAW_SAMPLES,  # Number of points to sample from acqf
-        num_restarts=NUM_RESTARTS,  # Number of starting points for multistart optimisation
+        q=args.batch_size,  # Number of final points to generate
+        raw_samples=args.raw_samples,  # Number of points to sample from acqf
+        num_restarts=args.n_restarts,  # Number of starting points for multistart optimisation
         options={
             "batch_limit": 5,  # Batch size for local optimisation
             "maxiter": 200,  # Max number of local optimisation iterations per batch
@@ -97,24 +177,25 @@ for i in range(N_BAYESOPT_STEPS):
     )
     new_ecrh_parameters = new_ecrh_parameters.detach()
     utils.save_tensor(
-        OUTPUT_FILENAME,
+        output_filename,
         f"bayesopt/{i}/ecrh_parameters",
         new_ecrh_parameters,
     )
 
     # Observe cost values
+    logging.info("Calculating cost of candidate points...")
     new_cost = torch.tensor(
         ecrh.get_cost(
             new_ecrh_parameters.cpu().numpy(),
-            f"jetto/runs/bayesopt/{i}",
-            ecrh.piecewise_linear,
-            objective.scalar_cost_function,
+            f"{output_dir}/jetto/bayesopt/{i}",
+            ecrh_function,
+            cost_function,
         ),
         device=device,
         dtype=dtype,
     )
     utils.save_tensor(
-        OUTPUT_FILENAME,
+        output_filename,
         f"bayesopt/{i}/cost",
         new_cost,
     )

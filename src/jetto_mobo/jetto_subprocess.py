@@ -1,9 +1,13 @@
 import asyncio
-from typing import Mapping
+import logging
+from typing import Mapping, Optional, Union
 
 
 async def new(
-    jetto_image: str, config_directory: str, run_name: str = "run"
+    jetto_image: str,
+    config_directory: str,
+    run_name: str = "run",
+    timelimit: Optional[Union[int, float]] = None,
 ) -> asyncio.subprocess.Process:
     """Create a new async subprocess that starts a JETTO Singularity container with the given config.
 
@@ -15,6 +19,8 @@ async def new(
         Path to a directory containing a JETTO configuration; output files will overwrite files in this directory.
     run_name : str, default="run"
         Name of run; used internally in JETTO.
+    timelimit : Optional[Union[int, float]], default=None
+        Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.
 
     Returns
     -------
@@ -42,9 +48,18 @@ async def new(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    print(f"Starting JETTO {run_name} in {config_directory} with PID {process.pid}.")
-    stdout, stderr = await process.communicate()
-    print(f"JETTO {run_name} in {config_directory} with PID {process.pid} completed.")
+    logging.info(
+        f"Starting JETTO {run_name} in {config_directory} with PID {process.pid}."
+    )
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timelimit)
+    except TimeoutError:
+        logging.info(
+            f"JETTO {run_name} (output={config_directory}, PID={process.pid}) cancelled (time limit of {timelimit}s exceeded)."
+        )
+    logging.info(
+        f"JETTO {run_name} (output={config_directory}, PID={process.pid}) terminated with return code {process.returncode}."
+    )
     if stdout is not None:
         stdout = stdout.decode()
     if stderr is not None:
@@ -53,7 +68,9 @@ async def new(
 
 
 async def run_many(
-    jetto_image: str, config: Mapping[str, str]
+    jetto_image: str,
+    config: Mapping[str, str],
+    timelimit: Optional[Union[int, float]] = None,
 ) -> list[(str, str, int)]:
     """Asynchronously run multiple JETTO runs, using `jetto_subprocess.new()`.
 
@@ -66,6 +83,8 @@ async def run_many(
         Keys are used to internally name the run.
         Values must be a path to a directory containing a JETTO configuration to load for each process;
         output files will overwrite files in this directory.
+    timelimit : Optional[Union[int, float]], default = None
+        Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.
 
     Returns
     -------
@@ -74,7 +93,7 @@ async def run_many(
     """
     return await asyncio.gather(
         *[
-            new(jetto_image, config_directory, run_name)
+            new(jetto_image, config_directory, run_name, timelimit)
             for run_name, config_directory in config.items()
         ]
     )
