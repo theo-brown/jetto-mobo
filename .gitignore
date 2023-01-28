@@ -9,3 +9,4 @@ venv/
 jetto/templates/*
 jetto/images/*
 jetto/runs/*
+data/*/jetto
