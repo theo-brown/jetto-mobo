@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from botorch import fit_gpytorch_mll
@@ -68,19 +68,11 @@ parser.add_argument(
 )
 parser.add_argument(
     "--jetto_timelimit",
-    type=Optional[float],
-    default=None,
-    help="Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.",
+    type=float,
+    default=-1,
+    help="Maximum number of seconds to wait for JETTO to complete. If < 0, run until complete.",
 )
 args = parser.parse_args()
-
-if args.ecrh_function == "piecewise_linear":
-    ecrh_function = ecrh.piecewise_linear
-    n_ecrh_parameters = 12
-
-if args.cost_function == "scalar":
-    cost_function = objective.scalar_cost_function
-    cost_dimension = 1
 
 if args.output_dir == "YYYY-MM-DD-hhmmss":
     output_dir = datetime.now().strftime("%Y-%m-%d-%H%M%S")
@@ -90,8 +82,17 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 output_filename = f"{output_dir}/output.hdf5"
 
+if args.ecrh_function == "piecewise_linear":
+    ecrh_function = ecrh.piecewise_linear
+    n_ecrh_parameters = 12
+
+if args.cost_function == "scalar":
+    cost_function = objective.scalar_cost_function
+    cost_dimension = 1
+
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -99,17 +100,18 @@ dtype = torch.double
 
 # Gather initial data
 # TODO: handle if none converged
-logging.info("Gathering initial data...")
+logger.info("Gathering initial data...")
 ecrh_parameters = torch.rand(
     [args.batch_size, n_ecrh_parameters], dtype=dtype, device=device
 )
 utils.save_tensor(output_filename, "initialisation/ecrh_parameters", ecrh_parameters)
 cost = torch.tensor(
     ecrh.get_cost(
-        ecrh_parameters,
-        f"{output_dir}/jetto/initial",
-        ecrh_function,
-        cost_function,
+        ecrh_parameters=ecrh_parameters,
+        directory=f"{output_dir}/jetto/initial",
+        ecrh_function=ecrh_function,
+        cost_function=cost_function,
+        timelimit=args.jetto_timelimit,
     ),
     device=device,
     dtype=dtype,
@@ -119,7 +121,7 @@ utils.save_tensor(output_filename, "initialisation/cost", cost)
 # cost = utils.load_tensor(OUTPUT_FILENAME, "initialisation/cost", device=device, dtype=dtype)
 
 # Bayesian optimisation
-logging.info("Starting BayesOpt...")
+logger.info("Starting BayesOpt...")
 for i in range(args.n_bayesopt_steps):
     # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation, we instead set the cost to a very large number.
@@ -127,7 +129,7 @@ for i in range(args.n_bayesopt_steps):
 
     # Initialise surrogate model
     # BoTorch performs maximisation, so need to use -cost
-    logging.info("Fitting surrogate model to observed costs...")
+    logger.info("Fitting surrogate model to observed costs...")
     model = SingleTaskGP(ecrh_parameters, -cost)
     # Fit the model
     mll = ExactMarginalLogLikelihood(model.likelihood, model)
@@ -159,7 +161,7 @@ for i in range(args.n_bayesopt_steps):
     # For explanation, see
     # https://botorch.org/v/0.1.1/docs/optimization
     # https://github.com/pytorch/botorch/issues/366#issuecomment-581951153
-    logging.info("Selecting candidates using acquisition function...")
+    logger.info("Selecting candidates using acquisition function...")
     new_ecrh_parameters, _ = optimize_acqf(
         acq_function=qNEI,
         bounds=torch.tensor(
@@ -183,13 +185,14 @@ for i in range(args.n_bayesopt_steps):
     )
 
     # Observe cost values
-    logging.info("Calculating cost of candidate points...")
+    logger.info("Calculating cost of candidate points...")
     new_cost = torch.tensor(
         ecrh.get_cost(
-            new_ecrh_parameters.cpu().numpy(),
-            f"{output_dir}/jetto/bayesopt/{i}",
-            ecrh_function,
-            cost_function,
+            ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
+            directory=f"{output_dir}/jetto/bayesopt/{i}",
+            ecrh_function=ecrh_function,
+            cost_function=cost_function,
+            timelimit=args.jetto_timelimit,
         ),
         device=device,
         dtype=dtype,
