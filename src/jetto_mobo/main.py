@@ -49,7 +49,7 @@ parser.add_argument(
 parser.add_argument(
     "--ecrh_function",
     type=str,
-    choices=["piecewise_linear"],
+    choices=["piecewise_linear", "sum_of_gaussians"],
     default="piecewise_linear",
     help="ECRH function to use.",
 )
@@ -75,12 +75,24 @@ parser.add_argument(
 args = parser.parse_args()
 
 if args.ecrh_function == "piecewise_linear":
-    ecrh_function = ecrh.piecewise_linear
     n_ecrh_parameters = 12
+    ecrh_function = ecrh.piecewise_linear
+elif args.ecrh_function == "sum_of_gaussians":
+    n_gaussians = 5
+    n_ecrh_parameters = n_gaussians * 2
+    ecrh_function = lambda x, params: ecrh.sum_of_gaussians(
+        x,
+        params[:n_gaussians],  # means
+        [0.0025] * n_gaussians,  # variances
+        params[n_gaussians:],  # amplitudes
+    )
 
 if args.cost_function == "scalar":
     cost_function = objective.scalar_cost_function
     cost_dimension = 1
+# elif args.cost_function == "vector":
+#     cost_function = objective.vector_cost_function
+#     cost_dimension = 8
 
 if args.output_dir == "YYYY-MM-DD-hhmmss":
     output_dir = datetime.now().strftime("%Y-%m-%d-%H%M%S")
@@ -106,7 +118,7 @@ ecrh_parameters = torch.rand(
 utils.save_tensor(output_filename, "initialisation/ecrh_parameters", ecrh_parameters)
 cost = torch.tensor(
     ecrh.get_cost(
-        ecrh_parameters,
+        ecrh_parameters.detach().cpu().numpy(),
         f"{output_dir}/jetto/initial",
         ecrh_function,
         cost_function,
@@ -199,6 +211,8 @@ for i in range(args.n_bayesopt_steps):
         f"bayesopt/{i}/cost",
         new_cost,
     )
+
+    # TODO: Save actual ECRH and q profiles
 
     # Update
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
