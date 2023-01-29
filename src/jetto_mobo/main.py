@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from typing import Optional, Union
 
+import h5py
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -74,13 +75,14 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
 if args.output_dir == "YYYY-MM-DD-hhmmss":
-    output_dir = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    output_dir = timestamp
 else:
     output_dir = args.output_dir
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-output_filename = f"{output_dir}/output.hdf5"
+output_filename = f"{output_dir}/{timestamp}.hdf5"
 
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
@@ -102,8 +104,28 @@ if args.cost_function == "scalar":
 #     cost_function = objective.vector_cost_function
 #     cost_dimension = 8
 
+# Save metadata
+with h5py.File(f"{output_dir}/output.hdf5", "a") as f:
+    f.create_group("bayesopt")
+    f["bayesopt"].attrs["output_dir"] = output_dir
+    f["bayesopt"].attrs["output_filename"] = output_filename
+    f["bayesopt"].attrs["n_bayesopt_steps"] = args.n_bayesopt_steps
+    f["bayesopt"].attrs["batch_size"] = args.batch_size
+    f["bayesopt"].attrs["n_restarts"] = args.n_restarts
+    f["bayesopt"].attrs["raw_samples"] = args.raw_samples
+    f["bayesopt"].attrs["n_sobol_samples"] = args.n_sobol_samples
+    f["bayesopt"].attrs["ecrh_function"] = args.ecrh_function
+    f["bayesopt"].attrs["cost_function"] = args.cost_function
+    f["bayesopt"].attrs["jetto_fail_cost"] = args.jetto_fail_cost
+    f["bayesopt"].attrs["jetto_timelimit"] = args.jetto_timelimit
+
 # Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    style="{",
+    format="logger:{asctime} {message}",
+    datefmt="%Y-%m-%d-%H%M%S",
+)
 logger = logging.getLogger(__name__)
 
 # Set up PyTorch
@@ -197,6 +219,7 @@ for i in range(args.n_bayesopt_steps):
     )
 
     # Observe cost values
+    # TODO: Save actual ECRH and q profiles
     logger.info("Calculating cost of candidate points...")
     new_cost = torch.tensor(
         ecrh.get_cost(
@@ -214,8 +237,6 @@ for i in range(args.n_bayesopt_steps):
         f"bayesopt/{i}/cost",
         new_cost,
     )
-
-    # TODO: Save actual ECRH and q profiles
 
     # Update
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
