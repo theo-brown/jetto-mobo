@@ -97,3 +97,24 @@ async def run_many(
             for run_name, config_directory in config.items()
         ]
     )
+
+
+def is_converged(directory: str) -> bool:
+    """Check if the JETTO run in `directory` is completed and converged.
+
+    Parameters
+    ----------
+    directory : str
+        Path to a JETTO results directory.
+
+    Returns
+    -------
+    bool
+        True iff `{directory}/jetto.status` exists and is `Status : Completed successfully`.
+    """
+    status_file = f"{directory}/jetto.status"
+    if os.path.exists(status_file):
+        with open(status_file) as f:
+            if f.read().strip() == "Status : Completed successfully":
+                return True
+    return False
