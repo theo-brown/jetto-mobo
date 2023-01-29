@@ -2,6 +2,8 @@ import numpy as np
 from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
 
+from jetto_mobo import jetto_subprocess
+
 
 def f1(profiles: Dataset, timetraces: Dataset):
     """q(0) - min(q)"""
@@ -58,6 +60,7 @@ def f8(profiles: Dataset, timetraces: Dataset):
     return f7(profiles, timetraces, value=4)
 
 
+# TODO Check that results from this match the GA
 def scalar_cost_function(path: str) -> np.ndarray:
     """Weighted sum of cost functions for safety factor profile.
 
@@ -71,10 +74,7 @@ def scalar_cost_function(path: str) -> np.ndarray:
     np.ndarray
         Scalar cost of safety factor profile. If the JETTO run did not converge, will be `np.nan`.
     """
-    with open(f"{path}/jetto.status") as f:
-        status = f.read().strip().split(" : ")[-1]
-
-    if status == "Completed successfully":
+    if jetto_subprocess.is_converged(path):
         results = JettoResults(path=path)
         profiles = results.load_profiles()
         timetraces = results.load_timetraces()
@@ -107,10 +107,7 @@ def vector_cost_function(path: str) -> np.ndarray:
     np.ndarray
         Vector of costs of safety factor profile.
     """
-    with open(f"{path}/jetto.status") as f:
-        status = f.read().strip().split(" : ")[-1]
-
-    if status == "Completed successfully":
+    if jetto_subprocess.is_converged(path):
         results = JettoResults(path=path)
         profiles = results.load_profiles()
         timetraces = results.load_timetraces()
