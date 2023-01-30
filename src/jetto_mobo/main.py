@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--output_dir",
     type=str,
-    default="YYYY-MM-DD-hhmmss",
+    default="data/YYYY-MM-DD-hhmmss",
     help="Directory to store results in; a directory with the specified path will be created if it does not already exist.",
 )
 parser.add_argument(
@@ -56,7 +56,7 @@ parser.add_argument(
 parser.add_argument(
     "--cost_function",
     type=str,
-    choices=["scalar"],
+    choices=["scalar", "vector"],
     default="scalar",
     help="Cost function to use.",
 )
@@ -74,16 +74,19 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+# Create output directory
 timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-if args.output_dir == "YYYY-MM-DD-hhmmss":
-    output_dir = timestamp
+if args.output_dir == "data/YYYY-MM-DD-hhmmss":
+    output_dir = f"data/{timestamp}"
 else:
     output_dir = args.output_dir
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-# TODO handle if already exists
+i = 0
+while os.path.exists(output_dir):
+    output_dir = f"{output_dir}_{i}"
+os.makedirs(output_dir)
 output_filename = f"{output_dir}/{timestamp}.hdf5"
 
+# Set ECRH function
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
@@ -104,12 +107,13 @@ elif args.ecrh_function == "sum_of_gaussians":
         )
 
 
+# Set cost function
 if args.cost_function == "scalar":
     cost_function = objective.scalar_cost_function
     cost_dimension = 1
-# elif args.cost_function == "vector":
-#     cost_function = objective.vector_cost_function
-#     cost_dimension = 8
+elif args.cost_function == "vector":
+    cost_function = objective.vector_cost_function
+    cost_dimension = 8
 
 # Save metadata
 with h5py.File(output_filename, "a") as f:
@@ -129,7 +133,7 @@ with h5py.File(output_filename, "a") as f:
 logging.basicConfig(
     level=logging.INFO,
     style="{",
-    format="{asctime} {message}",
+    format="{asctime} [{levelname}] {message}",
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger()
