@@ -81,6 +81,7 @@ else:
     output_dir = args.output_dir
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
+# TODO handle if already exists
 output_filename = f"{output_dir}/{timestamp}.hdf5"
 
 if args.ecrh_function == "piecewise_linear":
@@ -108,7 +109,7 @@ if args.cost_function == "scalar":
 #     cost_dimension = 8
 
 # Save metadata
-with h5py.File(f"{output_dir}/output.hdf5", "a") as f:
+with h5py.File(output_filename, "a") as f:
     f.create_group("bayesopt")
     f["bayesopt"].attrs["output_dir"] = output_dir
     f["bayesopt"].attrs["output_filename"] = output_filename
@@ -126,10 +127,10 @@ with h5py.File(f"{output_dir}/output.hdf5", "a") as f:
 logging.basicConfig(
     level=logging.INFO,
     style="{",
-    format="logger:{asctime} {message}",
-    datefmt="%Y-%m-%d-%H%M%S",
+    format="{asctime} {message}",
+    datefmt="%H:%M:%S",
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
