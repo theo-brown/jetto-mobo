@@ -88,13 +88,14 @@ if args.ecrh_function == "piecewise_linear":
     ecrh_function = ecrh.piecewise_linear
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = 5
+    variance = 0.85
     n_ecrh_parameters = n_gaussians * 2
 
     def ecrh_function(x, params):
         return ecrh.sum_of_gaussians(
             x,
             params[:n_gaussians],  # means
-            [0.0025] * n_gaussians,  # variances
+            [variance] * n_gaussians,  # variances
             params[n_gaussians:],  # amplitudes
         )
 
