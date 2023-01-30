@@ -238,6 +238,11 @@ for i in range(args.n_bayesopt_steps):
         f"bayesopt/{i}/ecrh_parameters",
         new_ecrh_parameters.cpu().numpy(),
     )
+    utils.save_to_hdf5(
+        output_filename,
+        f"bayesopt/{i}/target_ecrh",
+        ecrh_function(np.linspace(0, 1, 50), new_ecrh_parameters.cpu().numpy()),
+    )
 
     # Observe cost values
     logger.info("Calculating cost of candidate points...")
