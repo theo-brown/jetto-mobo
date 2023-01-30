@@ -1,9 +1,11 @@
 import argparse
+import json
 import logging
 import os
 from datetime import datetime
-import json
+
 import h5py
+import numpy as np
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -56,7 +58,7 @@ parser.add_argument(
 parser.add_argument(
     "--ecrh_function_config",
     type=str,
-    default='{}',
+    default="{}",
     help="Config JSON passed to ECRH function. Used to set fixed ECRH parameters.",
 )
 parser.add_argument(
@@ -102,8 +104,8 @@ if args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
 elif args.ecrh_function == "sum_of_gaussians":
-    n_gaussians = ecrh_function_config.get('n', 5)
-    variance = ecrh_function_config.get('variance', 0.85)
+    n_gaussians = ecrh_function_config.get("n", 5)
+    variance = ecrh_function_config.get("variance", 0.85)
     n_ecrh_parameters = n_gaussians * 2
 
     def ecrh_function(x, params):
