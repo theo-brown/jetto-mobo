@@ -241,15 +241,15 @@ for i in range(args.n_bayesopt_steps):
 
     # Observe cost values
     logger.info("Calculating cost of candidate points...")
-    ecrh, q, new_cost = ecrh.get_batch_cost(
+    converged_ecrh, converged_q, new_cost = ecrh.get_batch_cost(
         ecrh_parameters=ecrh_parameters.cpu().numpy(),
         batch_directory=f"{output_dir}/initialisation",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
     )
-    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/converged_ecrh", ecrh)
-    utils.save_tensor(output_filename, f"bayesopt/{i}/converged_q", q)
-    utils.save_tensor(output_filename, f"bayesopt/{i}/cost", new_cost)
+    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/converged_ecrh", converged_ecrh)
+    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/converged_q", converged_q)
+    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/cost", new_cost)
 
     # Update
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
