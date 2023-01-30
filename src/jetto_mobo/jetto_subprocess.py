@@ -1,15 +1,16 @@
 import asyncio
 import logging
-from typing import Mapping, Optional, Union
+from typing import Mapping, Optional, Tuple, Union
+
+import netCDF4
 
 
-async def new(
+async def run(
     jetto_image: str,
     config_directory: str,
-    run_name: str = "run",
     timelimit: Optional[Union[int, float]] = None,
-) -> asyncio.subprocess.Process:
-    """Create a new async subprocess that starts a JETTO Singularity container with the given config.
+) -> Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]:
+    """Run a JETTO Singularity container with the given config in an async subprocess.
 
     Parameters
     ----------
@@ -17,16 +18,17 @@ async def new(
         Path to the JETTO .sif Singularity container image.
     config_directory : str
         Path to a directory containing a JETTO configuration; output files will overwrite files in this directory.
-    run_name : str, default="run"
-        Name of run; used internally in JETTO.
+
     timelimit : Optional[Union[int, float]], default=None
         Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.
 
     Returns
     -------
-    asyncio.subprocess.Process
-        Subprocess of JETTO Singularity container.
+    Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]
+        If JETTO converged in the timelimit (return code 0), returns `(profiles, timetraces)`; else returns `(None, None)`.
     """
+    # Run name is only used internally in this container, so it doesn't matter what it's called
+    run_name = "run"
     process = await asyncio.create_subprocess_exec(
         "singularity",
         "exec",
@@ -45,26 +47,25 @@ async def new(
         run_name,
         "build",
         "docker",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
     )
-    logging.info(
-        f"Starting JETTO {run_name} in {config_directory} with PID {process.pid}."
-    )
+    logging.info(f"Starting JETTO in {config_directory} with PID {process.pid}.")
     try:
-        stdout, stderr = await asyncio.wait_for(process.communicate(), timelimit)
+        await asyncio.wait_for(process.communicate(), timelimit)
     except TimeoutError:
         logging.info(
-            f"JETTO {run_name} (output={config_directory}, PID={process.pid}) cancelled (time limit of {timelimit}s exceeded)."
+            f"JETTO (output={config_directory}, PID={process.pid}) cancelled (time limit of {timelimit}s exceeded)."
         )
     logging.info(
-        f"JETTO {run_name} (output={config_directory}, PID={process.pid}) terminated with return code {process.returncode}."
+        f"JETTO (output={config_directory}, PID={process.pid}) terminated with return code {process.returncode}."
     )
-    if stdout is not None:
-        stdout = stdout.decode()
-    if stderr is not None:
-        stderr = stderr.decode()
-    return stdout, stderr, process.returncode
+
+    if process.returncode == 0:
+        results = JettoResults(path=config_directory)
+        profiles = results.load_profiles()
+        timetraces = results.load_timetraces()
+        return profiles, timetraces
+    else:
+        return None, None
 
 
 async def run_many(
@@ -93,28 +94,7 @@ async def run_many(
     """
     return await asyncio.gather(
         *[
-            new(jetto_image, config_directory, run_name, timelimit)
+            run(jetto_image, config_directory, run_name, timelimit)
             for run_name, config_directory in config.items()
         ]
     )
-
-
-def is_converged(directory: str) -> bool:
-    """Check if the JETTO run in `directory` is completed and converged.
-
-    Parameters
-    ----------
-    directory : str
-        Path to a JETTO results directory.
-
-    Returns
-    -------
-    bool
-        True iff `{directory}/jetto.status` exists and is `Status : Completed successfully`.
-    """
-    status_file = f"{directory}/jetto.status"
-    if os.path.exists(status_file):
-        with open(status_file) as f:
-            if f.read().strip() == "Status : Completed successfully":
-                return True
-    return False

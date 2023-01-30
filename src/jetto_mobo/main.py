@@ -2,7 +2,6 @@ import argparse
 import logging
 import os
 from datetime import datetime
-from typing import Optional, Union
 
 import h5py
 import torch
@@ -90,12 +89,15 @@ if args.ecrh_function == "piecewise_linear":
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = 5
     n_ecrh_parameters = n_gaussians * 2
-    ecrh_function = lambda x, params: ecrh.sum_of_gaussians(
-        x,
-        params[:n_gaussians],  # means
-        [0.0025] * n_gaussians,  # variances
-        params[n_gaussians:],  # amplitudes
-    )
+
+    def ecrh_function(x, params):
+        return ecrh.sum_of_gaussians(
+            x,
+            params[:n_gaussians],  # means
+            [0.0025] * n_gaussians,  # variances
+            params[n_gaussians:],  # amplitudes
+        )
+
 
 if args.cost_function == "scalar":
     cost_function = objective.scalar_cost_function
@@ -135,30 +137,28 @@ dtype = torch.double
 # Gather initial data
 # TODO: handle if none converged
 logger.info("Gathering initial data...")
-ecrh_parameters = torch.rand(
-    [args.batch_size, n_ecrh_parameters], dtype=dtype, device=device
+ecrh_parameters = (
+    torch.rand([args.batch_size, n_ecrh_parameters]).detach().cpu().numpy()
 )
-utils.save_tensor(output_filename, "initialisation/ecrh_parameters", ecrh_parameters)
-cost = torch.tensor(
-    ecrh.get_cost(
-        ecrh_parameters=ecrh_parameters.detach().cpu().numpy(),
-        directory=f"{output_dir}/jetto/initial",
-        ecrh_function=ecrh_function,
-        cost_function=cost_function,
-        timelimit=args.jetto_timelimit,
-    ),
-    device=device,
-    dtype=dtype,
+utils.save_to_hdf5(output_filename, "initialisation/ecrh_parameters", ecrh_parameters)
+ecrh, q, cost = ecrh.get_batch_cost(
+    ecrh_parameters=ecrh_parameters,
+    batch_directory=f"{output_dir}/initialisation",
+    ecrh_function=ecrh_function,
+    cost_function=cost_function,
 )
-utils.save_tensor(output_filename, "initialisation/cost", cost)
-# ecrh_parameters = utils.load_tensor(OUTPUT_FILENAME, "initialisation/ecrh_parameters", device=device, dtype=dtype)
-# cost = utils.load_tensor(OUTPUT_FILENAME, "initialisation/cost", device=device, dtype=dtype)
+utils.save_to_hdf5(output_filename, "initialisation/converged_ecrh", ecrh)
+utils.save_to_hdf5(output_filename, "initialisation/converged_q", q)
+utils.save_to_hdf5(output_filename, "initialisation/cost", cost)
 
 # Bayesian optimisation
 logger.info("Starting BayesOpt...")
+cost = torch.tensor(cost, dtype=dtype, device=device)
+ecrh_parameters = torch.tensor(ecrh_parameters, dtype=dtype, device=device)
 for i in range(args.n_bayesopt_steps):
     # If a run failed, it will produce a NaN cost.
-    # To enable us to perform gradient-based optimisation, we instead set the cost to a very large number.
+    # To enable us to perform gradient-based optimisation,
+    # we instead set the cost to a very large number.
     cost[cost.isnan()] = args.jetto_fail_cost
 
     # Initialise surrogate model
@@ -173,7 +173,8 @@ for i in range(args.n_bayesopt_steps):
     # Choice of sampler:
     # Sobol is a quasirandom number generation scheme - generates low-discrepancy sequences
     # (low-discrepancy = on average, samples are evenly distributed to cover the space)
-    # BoTorch recommends using Sobol because it produces lower variance gradient estimates with much fewer samples [https://botorch.org/docs/samplers]
+    # BoTorch recommends using Sobol because it produces lower variance gradient estimates
+    # with much fewer samples [https://botorch.org/docs/samplers]
     qNEI = qNoisyExpectedImprovement(
         model=model,
         X_baseline=ecrh_parameters,
@@ -184,13 +185,17 @@ for i in range(args.n_bayesopt_steps):
     # Use multistart optimisation:
     # - Draw RAW_SAMPLES from the domain (uses the sampler defined in the acqf)
     # - Calculate value of acqf, a, at each RAW_SAMPLES point
-    # - Weight the RAW_SAMPLES by w = exp(eta * (a - mean(a))/std(a)) where eta is some temperature parameter
+    # - Weight the RAW_SAMPLES by w = exp(eta * (a - mean(a))/std(a))
+    #   where eta is some temperature parameter
     # - Draw NUM_RESTARTS from RAW_SAMPLES according to w
-    # - Perform local qNEI maximisation using scipy.minimize(method='L-BFGS-B') around each of NUM_RESTARTS points
+    # - Perform local qNEI maximisation using scipy.minimize(method='L-BFGS-B')
+    #   around each of NUM_RESTARTS points
     # - Take largest qNEI from all NUM_RESTARTS points
     # Does this jointly over the whole q-batch to reduce wallclock time
-    # General idea: RAW_SAMPLES is cheaper than NUM_RESTARTS because no local optimisation performed
-    # Performing the pre-sampling and weighting ensures that your initial points are already fairly good
+    # General idea: RAW_SAMPLES is cheaper than NUM_RESTARTS
+    # because no local optimisation is performed.
+    # Performing the pre-sampling and weighting ensures that your initial
+    # points are already fairly good.
     # For large q, might need to swap to sequential rather than joint optimisation
     # For explanation, see
     # https://botorch.org/v/0.1.1/docs/optimization
@@ -212,32 +217,24 @@ for i in range(args.n_bayesopt_steps):
         },
     )
     new_ecrh_parameters = new_ecrh_parameters.detach()
-    utils.save_tensor(
+    utils.save_to_hdf5(
         output_filename,
         f"bayesopt/{i}/ecrh_parameters",
-        new_ecrh_parameters,
+        new_ecrh_parameters.cpu().numpy(),
     )
 
     # Observe cost values
-    # TODO: Save actual ECRH and q profiles
     logger.info("Calculating cost of candidate points...")
-    new_cost = torch.tensor(
-        ecrh.get_cost(
-            ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
-            directory=f"{output_dir}/jetto/bayesopt/{i}",
-            ecrh_function=ecrh_function,
-            cost_function=cost_function,
-            timelimit=args.jetto_timelimit,
-        ),
-        device=device,
-        dtype=dtype,
+    ecrh, q, new_cost = ecrh.get_batch_cost(
+        ecrh_parameters=ecrh_parameters.cpu().numpy(),
+        batch_directory=f"{output_dir}/initialisation",
+        ecrh_function=ecrh_function,
+        cost_function=cost_function,
     )
-    utils.save_tensor(
-        output_filename,
-        f"bayesopt/{i}/cost",
-        new_cost,
-    )
+    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/converged_ecrh", ecrh)
+    utils.save_tensor(output_filename, f"bayesopt/{i}/converged_q", q)
+    utils.save_tensor(output_filename, f"bayesopt/{i}/cost", new_cost)
 
     # Update
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
-    cost = torch.cat([cost, new_cost])
+    cost = torch.cat([cost, torch.tensor(new_cost, dtype=dtype, device=device)])
