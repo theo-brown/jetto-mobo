@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Mapping, Optional, Tuple, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import netCDF4
 from jetto_tools.results import JettoResults
@@ -94,7 +94,7 @@ async def run_many(
     """
     return await asyncio.gather(
         *[
-            run(jetto_image, config_directory, run_name, timelimit)
+            run(jetto_image, config_directory, timelimit)
             for config_directory in config_directories
         ]
     )
