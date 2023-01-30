@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 from datetime import datetime
-
+import json
 import h5py
 import torch
 from botorch import fit_gpytorch_mll
@@ -54,6 +54,12 @@ parser.add_argument(
     help="ECRH function to use.",
 )
 parser.add_argument(
+    "--ecrh_function_config",
+    type=str,
+    default='{}',
+    help="Config JSON passed to ECRH function. Used to set fixed ECRH parameters.",
+)
+parser.add_argument(
     "--cost_function",
     type=str,
     choices=["scalar", "vector"],
@@ -87,6 +93,8 @@ os.makedirs(output_dir)
 output_filename = f"{output_dir}/{timestamp}.hdf5"
 
 # Set ECRH function
+ecrh_function_config = json.loads(args.ecrh_function_config)
+
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
@@ -94,8 +102,8 @@ if args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
 elif args.ecrh_function == "sum_of_gaussians":
-    n_gaussians = 5
-    variance = 0.85
+    n_gaussians = ecrh_function_config.get('n', 5)
+    variance = ecrh_function_config.get('variance', 0.85)
     n_ecrh_parameters = n_gaussians * 2
 
     def ecrh_function(x, params):
