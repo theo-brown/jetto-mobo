@@ -7,7 +7,7 @@ import netCDF4
 import numpy as np
 from jetto_tools.results import JettoResults
 
-from jetto_mobo import jetto_subprocess
+from jetto_mobo import jetto_subprocess, utils
 
 
 def _gaussian(
@@ -104,6 +104,43 @@ def piecewise_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndar
     return np.interp(x, node_xs, node_ys)
 
 
+def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
+    """Simple 6-segment piecewise linear function.
+
+    Parameters
+    ----------
+    x : Iterable[float]
+        Input array; currently needs to be [0, 1].
+    parameters : Iterable[float]
+        12 parameters, each [0, 1].
+
+    Returns
+    -------
+    np.ndarray
+        6-segment piecewise linear function
+
+    Raises
+    ------
+    ValueError
+        If `len(parameters) != 12`.
+    """
+    if len(parameters) != 12:
+        raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
+    nodes = np.array(
+        [
+            (0, parameters[0]),
+            (parameters[1], parameters[2]),
+            (parameters[3], parameters[4]),
+            (parameters[5], parameters[6]),
+            (parameters[7], parameters[8]),
+            (parameters[9], parameters[10]),
+            (parameters[11], 0),
+        ]
+    )
+
+    return np.interp(x, nodes[:, 0], nodes[:, 1])
+
+
 def create_config(
     template_directory: str,
     config_directory: str,
@@ -151,7 +188,6 @@ def get_batch_cost(
     """Compute the given cost function for each element in a batch array of ECRH parameters.
 
     This function uses `jetto_subprocess.run_many` to asynchronously run a batch of JETTO runs, one for each element of the batch.
-    TODO: Currently only works with scalar cost function
 
     Parameters
     ----------
@@ -174,8 +210,10 @@ def get_batch_cost(
     -------
     np.ndarray
         A `b x X` array containing the converged ECRH profile.
+        If JETTO run `i` failed, elements `[i, :]`  will be np.nan.
     np.ndarray
         A `b x X` array containing the converged Q profile.
+        If JETTO run `i` failed, elements `[i, :]`  will be np.nan.
     np.ndarray
         A `b x c` array containing the value of `cost_function` for the given converged outputs..
         If JETTO run `i` failed, elements `[i, :]`  will be np.nan.
@@ -196,9 +234,9 @@ def get_batch_cost(
     )
 
     # Parse outputs
-    converged_inputs = np.full(batch_size, np.nan)
-    converged_outputs = np.full(batch_size, np.nan)
-    costs = np.full(batch_size, np.nan)
+    converged_inputs = []
+    converged_outputs = []
+    costs = []
     for i, (profiles, timetraces) in enumerate(batch_output):
         if profiles is not None:
             # Load data
@@ -206,8 +244,16 @@ def get_batch_cost(
             profiles = results.load_profiles()
             timetraces = results.load_timetraces()
             # Save to arrays
-            converged_inputs[i] = profiles["QECE"][-1]
-            converged_outputs[i] = profiles["Q"][-1]
-            costs[i] = cost_function(profiles, timetraces)
+            converged_inputs.append(profiles["QECE"][-1])
+            converged_outputs.append(profiles["Q"][-1])
+            costs.append(cost_function(profiles, timetraces))
+        else:
+            converged_inputs.append(None)
+            converged_outputs.append(None)
+            costs.append(None)
 
-    return converged_inputs, converged_outputs, costs
+    return (
+        utils.pad_1d(converged_inputs),
+        utils.pad_1d(converged_outputs),
+        utils.pad_1d(costs),
+    )

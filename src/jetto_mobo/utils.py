@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+from typing import Iterable, Optional
 
 
 def save_to_hdf5(
@@ -18,3 +19,13 @@ def load_from_hdf5(
 ) -> np.ndarray:
     with h5py.File(filename, "r") as f:
         return np.ndarray(f[dataset_name][:])
+
+
+def pad_1d(a: Iterable[Optional[np.ndarray]], pad_value: float = np.nan) -> np.ndarray:
+    """Pad a ragged sequence of 1D arrays."""
+    row_length = max([len(r) if r is not None else 0 for r in a])
+    a_padded = np.full((len(a), row_length), np.nan)
+    for i, r in enumerate(a):
+        if r is not None:
+            a_padded[i, : len(r)] = np.array(r)
+    return a_padded
