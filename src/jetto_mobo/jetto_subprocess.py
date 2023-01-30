@@ -71,31 +71,30 @@ async def run(
 
 async def run_many(
     jetto_image: str,
-    config: Mapping[str, str],
+    config_directories: Iterable[str],
     timelimit: Optional[Union[int, float]] = None,
-) -> list[(str, str, int)]:
-    """Asynchronously run multiple JETTO runs, using `jetto_subprocess.new()`.
+) -> Iterable[Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]]:
+    """Asynchronously run multiple JETTO runs, using `jetto_subprocess.run()`.
 
     Parameters
     ----------
     jetto_image : str
         Path to the JETTO .sif Singularity container image.
-    config : Mapping[str, str]
-        A mapping of run names to config directories.
-        Keys are used to internally name the run.
+    config : Iterable[str, str]
+        List of config directories.
         Values must be a path to a directory containing a JETTO configuration to load for each process;
-        output files will overwrite files in this directory.
+        output files will overwrite files infiles this directory.
     timelimit : Optional[Union[int, float]], default = None
         Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.
 
     Returns
     -------
-    list[(str, str, int)]
-        List of (stdout, stderr, return_code) for each JETTO subprocess.
+    Iterable[Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]]
+        List of (`profiles`, `timetraces`) for each JETTO subprocess.
     """
     return await asyncio.gather(
         *[
             run(jetto_image, config_directory, run_name, timelimit)
-            for run_name, config_directory in config.items()
+            for config_directory in config_directories
         ]
     )
