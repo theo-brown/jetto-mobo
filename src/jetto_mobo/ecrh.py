@@ -1,9 +1,11 @@
 import asyncio
 import os
-from typing import Callable, Iterable, Tuple
+from typing import Callable, Iterable, Optional, Tuple
 
 import jetto_tools
+import netCDF4
 import numpy as np
+from jetto_tools.results import JettoResults
 
 from jetto_mobo import jetto_subprocess
 
@@ -142,6 +144,7 @@ def get_batch_cost(
     batch_directory: str,
     ecrh_function: Callable[[np.ndarray, np.ndarray], np.ndarray],
     cost_function: Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray],
+    timelimit: Optional[int] = None,
     jetto_template: str = "jetto/templates/spr45-v9",
     jetto_image: str = "jetto/images/sim.v220922.sif",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -160,6 +163,8 @@ def get_batch_cost(
         A function that takes normalised radius (XRHO) as first argument, `n` ECRH parameters as second argument, and returns ECRH power (QECE).
     cost_function : Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray]
         A function that takes JETTO `profiles` and `timetraces` datasets, and returns a cost associated with the ECRH profile. Output shape `(c,)`.
+    timelimit : Optional[int], default None
+        Time limit in seconds for JETTO runs. If None, no timelimit imposed.
     jetto_template : str, default "jetto/templates/spr45-v9"
         Directory of JETTO template run, used as a base to create the new JETTO configurations.
     jetto_image : str, default "jetto/images/sim.v220922.sif"
@@ -181,7 +186,7 @@ def get_batch_cost(
         run_directory = f"{batch_directory}/{i}"
         os.makedirs(run_directory)
 
-        ecrh.create_config(
+        create_config(
             jetto_template,
             run_directory,
             lambda xrho: ecrh_function(xrho, ecrh_parameters[i]),
@@ -207,4 +212,4 @@ def get_batch_cost(
             converged_outputs[i] = profiles["Q"][-1]
             costs[i] = cost_function(profiles, timetraces)
 
-    return converged_inputs, converged_outputs, cost
+    return converged_inputs, converged_outputs, costs

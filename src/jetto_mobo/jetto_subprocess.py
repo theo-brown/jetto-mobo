@@ -3,6 +3,7 @@ import logging
 from typing import Mapping, Optional, Tuple, Union
 
 import netCDF4
+from jetto_tools.results import JettoResults
 
 
 async def run(
