@@ -61,72 +61,57 @@ def f8(profiles: Dataset, timetraces: Dataset):
 
 
 # TODO Check that results from this match the GA
-def scalar_cost_function(path: str) -> np.ndarray:
+def scalar_cost_function(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
     """Weighted sum of cost functions for safety factor profile.
 
     Parameters
     ----------
-    path : str
-        Path to a JettoResults directory.
+    profiles : Dataset
+
+    timetraces : Dataset
 
     Returns
     -------
     np.ndarray
         Scalar cost of safety factor profile. If the JETTO run did not converge, will be `np.nan`.
     """
-    if jetto_subprocess.is_converged(path):
-        results = JettoResults(path=path)
-        profiles = results.load_profiles()
-        timetraces = results.load_timetraces()
-
-        return np.array(
-            [
-                0.5 * f1(profiles, timetraces)
-                + 5 * f2(profiles, timetraces)
-                + 6 * f3(profiles, timetraces)
-                + 10 * f5(profiles, timetraces)
-                + 10 * f6(profiles, timetraces)
-                + 1 * f7(profiles, timetraces)
-                + 2 * f8(profiles, timetraces)
-            ]
-        )
-    else:
-        return np.array([np.nan])
+    return np.array(
+        [
+            0.5 * f1(profiles, timetraces)
+            + 5 * f2(profiles, timetraces)
+            + 6 * f3(profiles, timetraces)
+            + 10 * f5(profiles, timetraces)
+            + 10 * f6(profiles, timetraces)
+            + 1 * f7(profiles, timetraces)
+            + 2 * f8(profiles, timetraces)
+        ]
+    )
 
 
-def vector_cost_function(path: str) -> np.ndarray:
+def vector_cost_function(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
     """Vector cost function for safety factor profile.
 
     Parameters
     ----------
-    path : str
-        Path to a (converged) JettoResults directory.
+    profiles : Dataset
+
+    timetraces : Dataset
+
 
     Returns
     -------
     np.ndarray
         Vector of costs of safety factor profile.
     """
-    if jetto_subprocess.is_converged(path):
-        results = JettoResults(path=path)
-        profiles = results.load_profiles()
-        timetraces = results.load_timetraces()
-        return np.array(
-            [
-                f1(profiles, timetraces),
-                f2(profiles, timetraces),
-                f3(profiles, timetraces),
-                f4(profiles, timetraces),
-                f5(profiles, timetraces),
-                f6(profiles, timetraces),
-                f7(profiles, timetraces),
-                f8(profiles, timetraces),
-            ]
-        )
-    else:
-        return np.full(8, np.nan)
-
-
-if __name__ == "__main__":
-    for i in range(3):
-        print(scalar_cost_function(f"jetto/runs/bayesopt/0/{i}"))
+    return np.array(
+        [
+            f1(profiles, timetraces),
+            f2(profiles, timetraces),
+            f3(profiles, timetraces),
+            f4(profiles, timetraces),
+            f5(profiles, timetraces),
+            f6(profiles, timetraces),
+            f7(profiles, timetraces),
+            f8(profiles, timetraces),
+        ]
+    )

@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Tuple
 
 import jetto_tools
 import numpy as np
@@ -137,28 +137,29 @@ def create_config(
     config.export(config_directory)
 
 
-def get_cost(
+def get_batch_cost(
     ecrh_parameters: np.ndarray,
-    directory: str,
+    batch_directory: str,
     ecrh_function: Callable[[np.ndarray, np.ndarray], np.ndarray],
-    cost_function: Callable[[str], np.ndarray],
+    cost_function: Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray],
     jetto_template: str = "jetto/templates/spr45-v9",
     jetto_image: str = "jetto/images/sim.v220922.sif",
-) -> np.ndarray:
-    """Compute the safety factor cost for each element in a batch array of ECRH parameters.
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute the given cost function for each element in a batch array of ECRH parameters.
 
     This function uses `jetto_subprocess.run_many` to asynchronously run a batch of JETTO runs, one for each element of the batch.
+    TODO: Currently only works with scalar cost function
 
     Parameters
     ----------
     ecrh_parameters : np.ndarray
         A `b x n` array, where `b` is the number of JETTO runs (i.e. batch size) and `n` is the number of ECRH parameters.
-    directory : str
+    batch_directory : str
         Root directory to store JETTO files in. Output of each run will be stored in '{directory}/{i}', for i=1,...,n.
     ecrh_function : Callable[(Iterable[float], Iterable[float]), Iterable[float]]
         A function that takes normalised radius (XRHO) as first argument, `n` ECRH parameters as second argument, and returns ECRH power (QECE).
-    cost_function : Callable[str, np.ndarray]
-        A function that takes a JETTO output directory and returns a cost associated with the ECRH profile. Output shape `(c,)`.
+    cost_function : Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray]
+        A function that takes JETTO `profiles` and `timetraces` datasets, and returns a cost associated with the ECRH profile. Output shape `(c,)`.
     jetto_template : str, default "jetto/templates/spr45-v9"
         Directory of JETTO template run, used as a base to create the new JETTO configurations.
     jetto_image : str, default "jetto/images/sim.v220922.sif"
@@ -167,22 +168,43 @@ def get_cost(
     Returns
     -------
     np.ndarray
-        A `b x c` array containing the value of cost_function when the ECRH is set according to the parameters.
-        If JETTO run `i` failed, elements `[i, :]`  will be np.nan
+        A `b x X` array containing the converged ECRH profile.
+    np.ndarray
+        A `b x X` array containing the converged Q profile.
+    np.ndarray
+        A `b x c` array containing the value of `cost_function` for the given converged outputs..
+        If JETTO run `i` failed, elements `[i, :]`  will be np.nan.
     """
-    config = {}
-    for i in range(ecrh_parameters.shape[0]):
-        run_directory = f"{directory}/{i}"
+    batch_size = ecrh_parameters.shape[0]
+    tasks = []
+    for i in range(batch_size):
+        run_directory = f"{batch_directory}/{i}"
         os.makedirs(run_directory)
 
-        create_config(
+        ecrh.create_config(
             jetto_template,
             run_directory,
             lambda xrho: ecrh_function(xrho, ecrh_parameters[i]),
         )
 
-        config[str(i)] = run_directory
+        tasks.append(jetto_subprocess.run(jetto_image, run_directory, timelimit))
 
-    asyncio.run(jetto_subprocess.run_many(jetto_image, config))
+    # Run asynchronously in parallel
+    batch_output = asyncio.run(asyncio.gather(*[tasks]))
 
-    return np.array([cost_function(run_directory) for run_directory in config.values()])
+    # Parse outputs
+    converged_inputs = np.full(batch_size, np.nan)
+    converged_outputs = np.full(batch_size, np.nan)
+    costs = np.full(batch_size, np.nan)
+    for i, (profiles, timetraces) in enumerate(zip(*batch_output)):
+        if profiles is not None:
+            # Load data
+            results = JettoResults(path=f"{batch_directory}/{i}")
+            profiles = results.load_profiles()
+            timetraces = results.load_timetraces()
+            # Save to arrays
+            converged_inputs[i] = profiles["QECE"][-1]
+            converged_outputs[i] = profiles["Q"][-1]
+            costs[i] = cost_function(profiles, timetraces)
+
+    return converged_inputs, converged_outputs, cost
