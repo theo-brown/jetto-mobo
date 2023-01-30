@@ -6,6 +6,7 @@ import jetto_tools
 import netCDF4
 import numpy as np
 from jetto_tools.results import JettoResults
+from scipy.interpolate import CubicSpline
 
 from jetto_mobo import jetto_subprocess, utils
 
@@ -22,6 +23,7 @@ def sum_of_gaussians(
     variances: Iterable[float],
     amplitudes: Iterable[float],
 ) -> np.ndarray:
+
     if len(means) != len(variances) or len(means) != len(amplitudes):
         raise ValueError(
             "means, variances, amplitudes should be same length;"
@@ -126,19 +128,21 @@ def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.nd
     """
     if len(parameters) != 12:
         raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
-    nodes = np.array(
-        [
-            (0, parameters[0]),
-            (parameters[1], parameters[2]),
-            (parameters[3], parameters[4]),
-            (parameters[5], parameters[6]),
-            (parameters[7], parameters[8]),
-            (parameters[9], parameters[10]),
-            (parameters[11], 0),
-        ]
-    )
+    padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
+    node_xs = padded_parameters[:7]
+    node_ys = padded_parameters[7:]
+    return np.interp(x, node_xs, node_ys)
 
-    return np.interp(x, nodes[:, 0], nodes[:, 1])
+
+def cubic_spline(x: Iterable[float], parameters: Iterable[float]):
+    if len(parameters) % 2 != 0:
+        raise ValueError("Must have an even number of parameters.")
+    padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
+    n_nodes = len(padded_parameters) // 2
+    node_xs = padded_parameters[:n_nodes]
+    node_ys = padded_parameters[n_nodes:]
+    f = CubicSpline(node_xs, node_ys, bc_type="clamped")
+    return f(x)
 
 
 def create_config(

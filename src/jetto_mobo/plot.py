@@ -1,12 +1,7 @@
-from typing import Iterable
-
-import numpy as np
-import plotly
-import plotly.graph_objects as go
-from jetto_tools.results import JettoResults
-from plotly.subplots import make_subplots
 import h5py
-from jetto_mobo import ecrh
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 def solution_batch(group: h5py.Group):
@@ -16,27 +11,27 @@ def solution_batch(group: h5py.Group):
         figure.add_traces(
             [
                 go.Scatter(
-                    x = np.linspace(0, 1, len(group["target_ecrh"][i])),
+                    x=np.linspace(0, 1, len(group["target_ecrh"][i])),
                     # Rescale target_ecrh to match the converged value
                     y=group["target_ecrh"][i] * np.max(group["converged_ecrh"][i]),
                     name=str(i),
-                    line_dash='dot',
+                    line_dash="dot",
                     line_color=group["cost"][i],
-                    coloraxis = "cost",
+                    coloraxis="cost",
                 ),
                 go.Scatter(
                     x=np.linspace(0, 1, len(group["converged_ecrh"][i])),
                     y=group["converged_ecrh"][i],
                     name=str(i),
                     line_color=group["cost"][i],
-                    coloraxis = "cost",
+                    coloraxis="cost",
                 ),
                 go.Scatter(
                     x=np.linspace(0, 1, len(group["converged_q"][i])),
                     y=group["converged_q"][i],
                     name=str(i),
                     line_color=group["cost"][i],
-                    coloraxis = "cost",
+                    coloraxis="cost",
                 ),
             ],
             rows=[1, 1, 1],
@@ -53,7 +48,7 @@ def solution_batch(group: h5py.Group):
         xaxis_title="Normalised radius",
         coloraxis_colorscale="viridis",
     )
-    
+
     return figure
 
 
@@ -105,7 +100,7 @@ def optimisation_progress(hdf5_file: h5py.File):
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
@@ -117,7 +112,7 @@ if __name__ == "__main__":
         type=str,
     )
     args = parser.parse_args()
-    
+
     with h5py.File(args.input_file, "r") as f:
         if args.mode == "solution":
             solution_batch(f["initialisation"]).show()
