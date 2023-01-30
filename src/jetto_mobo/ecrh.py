@@ -181,21 +181,19 @@ def get_batch_cost(
         If JETTO run `i` failed, elements `[i, :]`  will be np.nan.
     """
     batch_size = ecrh_parameters.shape[0]
-    tasks = []
-    for i in range(batch_size):
-        run_directory = f"{batch_directory}/{i}"
-        os.makedirs(run_directory)
-
+    config_directories = [f"{batch_directory}/{i}" for i in range(batch_size)]
+    for i, config_directory in enumerate(config_directories):
+        os.makedirs(config_directory)
         create_config(
             jetto_template,
-            run_directory,
+            config_directory,
             lambda xrho: ecrh_function(xrho, ecrh_parameters[i]),
         )
 
-        tasks.append(jetto_subprocess.run(jetto_image, run_directory, timelimit))
-
     # Run asynchronously in parallel
-    batch_output = asyncio.run(asyncio.gather(*[tasks]))
+    batch_output = asyncio.run(
+        jetto_subprocess.run_many(jetto_image, config_directories, timelimit)
+    )
 
     # Parse outputs
     converged_inputs = np.full(batch_size, np.nan)
