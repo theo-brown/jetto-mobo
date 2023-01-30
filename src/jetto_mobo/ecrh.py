@@ -199,7 +199,7 @@ def get_batch_cost(
     converged_inputs = np.full(batch_size, np.nan)
     converged_outputs = np.full(batch_size, np.nan)
     costs = np.full(batch_size, np.nan)
-    for i, (profiles, timetraces) in enumerate(zip(*batch_output)):
+    for i, (profiles, timetraces) in enumerate(batch_output):
         if profiles is not None:
             # Load data
             results = JettoResults(path=f"{batch_directory}/{i}")
