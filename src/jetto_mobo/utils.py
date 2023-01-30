@@ -1,7 +1,5 @@
-from typing import Optional
-
 import h5py
-import torch
+import numpy as np
 
 
 def save_to_hdf5(

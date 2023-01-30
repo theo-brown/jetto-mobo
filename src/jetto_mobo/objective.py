@@ -1,8 +1,5 @@
 import numpy as np
-from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
-
-from jetto_mobo import jetto_subprocess
 
 
 def f1(profiles: Dataset, timetraces: Dataset):
