@@ -3,9 +3,9 @@ from netCDF4 import Dataset
 
 
 def f1(profiles: Dataset, timetraces: Dataset):
-    """q(0) - min(q)"""
+    """|| q(0) - min(q) ||"""
     q = profiles["Q"][-1].data
-    return q[0] - np.min(q)
+    return np.abs(q[0] - np.min(q))
 
 
 def f2(profiles: Dataset, timetraces: Dataset, epsilon=0.3):
@@ -15,9 +15,9 @@ def f2(profiles: Dataset, timetraces: Dataset, epsilon=0.3):
 
 
 def f3(profiles: Dataset, timetraces: Dataset):
-    """argmin(q)"""
+    """argmin(q) / len(q)"""
     q = profiles["Q"][-1].data
-    return np.argmin(q)
+    return np.argmin(q) / len(q)
 
 
 def f4(profiles: Dataset, timetraces: Dataset, epsilon=0.03):
@@ -42,18 +42,18 @@ def f6(profiles: Dataset, timetraces: Dataset):
 
 
 def f7(profiles: Dataset, timetraces: Dataset, value=3):
-    """-dq at first point where q>=value and r >= argmin(q)"""
+    """Normalised -dq at first point where q>=value and r >= argmin(q)"""
     q = profiles["Q"][-1].data
     dq = np.gradient(q)
     condition_1 = q >= value
     condition_2 = np.arange(len(q)) >= np.argmin(q)
     # Get index of element where both conditions are met
     i = np.where(condition_1 & condition_2)[0][0]
-    return -dq[i]
+    return -dq[i] / np.max(dq)
 
 
 def f8(profiles: Dataset, timetraces: Dataset):
-    """-dq at first point where q>=4 and r >= argmin(q)"""
+    """Normalised -dq at first point where q>=4 and r >= argmin(q)"""
     return f7(profiles, timetraces, value=4)
 
 
