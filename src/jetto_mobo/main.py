@@ -49,7 +49,7 @@ parser.add_argument(
 parser.add_argument(
     "--ecrh_function",
     type=str,
-    choices=["piecewise_linear", "sum_of_gaussians"],
+    choices=["piecewise_linear", "sum_of_gaussians", "piecewise_linear_2"],
     default="piecewise_linear",
     help="ECRH function to use.",
 )
@@ -87,6 +87,9 @@ output_filename = f"{output_dir}/{timestamp}.hdf5"
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
+if args.ecrh_function == "piecewise_linear_2":
+    n_ecrh_parameters = 12
+    ecrh_function = ecrh.piecewise_linear_2
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = 5
     variance = 0.85
