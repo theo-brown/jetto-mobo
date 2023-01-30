@@ -1,6 +1,7 @@
+from typing import Iterable, Optional
+
 import h5py
 import numpy as np
-from typing import Iterable, Optional
 
 
 def save_to_hdf5(
