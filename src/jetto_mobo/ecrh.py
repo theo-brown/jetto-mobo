@@ -134,15 +134,17 @@ def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.nd
     return np.interp(x, node_xs, node_ys)
 
 
-def cubic_spline(x: Iterable[float], parameters: Iterable[float]):
-    if len(parameters) % 2 != 0:
-        raise ValueError("Must have an even number of parameters.")
-    padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
-    n_nodes = len(padded_parameters) // 2
-    node_xs = padded_parameters[:n_nodes]
-    node_ys = padded_parameters[n_nodes:]
-    f = CubicSpline(node_xs, node_ys, bc_type="clamped")
-    return f(x)
+# def cubic_spline(x: Iterable[float], parameters: Iterable[float]):
+#     if len(parameters) % 2 != 0:
+#         raise ValueError("Must have an even number of parameters.")
+#     padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
+#     n_nodes = len(padded_parameters) // 2
+#     node_xs = padded_parameters[:n_nodes]
+#     node_ys = padded_parameters[n_nodes:]
+#     # Spline requires increasing x
+#     sorted_indices = np.argsort(node_xs)
+#     f = CubicSpline(node_xs[sorted_indices], node_ys[sorted_indices], bc_type="clamped")
+#     return f(x)
 
 
 def create_config(

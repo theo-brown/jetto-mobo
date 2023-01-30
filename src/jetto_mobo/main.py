@@ -51,7 +51,12 @@ parser.add_argument(
 parser.add_argument(
     "--ecrh_function",
     type=str,
-    choices=["piecewise_linear", "sum_of_gaussians", "piecewise_linear_2"],
+    choices=[
+        "piecewise_linear",
+        "sum_of_gaussians",
+        "piecewise_linear_2",
+        # "cubic_spline",
+    ],
     default="piecewise_linear",
     help="ECRH function to use.",
 )
@@ -100,12 +105,16 @@ ecrh_function_config = json.loads(args.ecrh_function_config)
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
-if args.ecrh_function == "piecewise_linear_2":
+elif args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
+# elif args.ecrh_function == "cubic_spline":
+#     n_nodes = ecrh_function_config.get("n", 5)
+#     n_ecrh_parameters = n_nodes * 2
+#     ecrh_function = ecrh.cubic_spline
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = ecrh_function_config.get("n", 5)
-    variance = ecrh_function_config.get("variance", 0.85)
+    variance = ecrh_function_config.get("variance", 0.0025)
     n_ecrh_parameters = n_gaussians * 2
 
     def ecrh_function(x, params):
