@@ -48,6 +48,8 @@ async def run(
         run_name,
         "build",
         "docker",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     logging.info(f"Starting JETTO in {config_directory} with PID {process.pid}.")
     try:
