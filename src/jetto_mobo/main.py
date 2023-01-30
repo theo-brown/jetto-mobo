@@ -258,7 +258,7 @@ for i in range(args.n_bayesopt_steps):
     # Observe cost values
     logger.info("Calculating cost of candidate points...")
     converged_ecrh, converged_q, new_cost = ecrh.get_batch_cost(
-        ecrh_parameters=ecrh_parameters.cpu().numpy(),
+        ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
         batch_directory=f"{output_dir}/initialisation",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
