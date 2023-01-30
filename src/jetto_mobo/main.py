@@ -110,18 +110,17 @@ if args.cost_function == "scalar":
 
 # Save metadata
 with h5py.File(output_filename, "a") as f:
-    f.create_group("bayesopt")
-    f["bayesopt"].attrs["output_dir"] = output_dir
-    f["bayesopt"].attrs["output_filename"] = output_filename
-    f["bayesopt"].attrs["n_bayesopt_steps"] = args.n_bayesopt_steps
-    f["bayesopt"].attrs["batch_size"] = args.batch_size
-    f["bayesopt"].attrs["n_restarts"] = args.n_restarts
-    f["bayesopt"].attrs["raw_samples"] = args.raw_samples
-    f["bayesopt"].attrs["n_sobol_samples"] = args.n_sobol_samples
-    f["bayesopt"].attrs["ecrh_function"] = args.ecrh_function
-    f["bayesopt"].attrs["cost_function"] = args.cost_function
-    f["bayesopt"].attrs["jetto_fail_cost"] = args.jetto_fail_cost
-    f["bayesopt"].attrs["jetto_timelimit"] = args.jetto_timelimit
+    f["/"].attrs["output_dir"] = output_dir
+    f["/"].attrs["output_filename"] = output_filename
+    f["/"].attrs["n_bayesopt_steps"] = args.n_bayesopt_steps
+    f["/"].attrs["batch_size"] = args.batch_size
+    f["/"].attrs["n_restarts"] = args.n_restarts
+    f["/"].attrs["raw_samples"] = args.raw_samples
+    f["/"].attrs["n_sobol_samples"] = args.n_sobol_samples
+    f["/"].attrs["ecrh_function"] = args.ecrh_function
+    f["/"].attrs["cost_function"] = args.cost_function
+    f["/"].attrs["jetto_fail_cost"] = args.jetto_fail_cost
+    f["/"].attrs["jetto_timelimit"] = args.jetto_timelimit
 
 # Set up logging
 logging.basicConfig(
