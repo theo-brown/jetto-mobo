@@ -6,9 +6,10 @@ import jetto_tools
 import netCDF4
 import numpy as np
 from jetto_tools.results import JettoResults
-from scipy.interpolate import CubicSpline
 
 from jetto_mobo import jetto_subprocess, utils
+
+# from scipy.interpolate import CubicSpline
 
 
 def _gaussian(
