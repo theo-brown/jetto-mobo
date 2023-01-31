@@ -56,8 +56,10 @@ async def run(
         await asyncio.wait_for(process.communicate(), timelimit)
     except TimeoutError:
         logging.info(
-            f"JETTO (output={config_directory}, PID={process.pid}) cancelled (time limit of {timelimit}s exceeded)."
+            f"JETTO (output={config_directory}, PID={process.pid}) killed (time limit of {timelimit}s exceeded)."
         )
+        process.kill()
+
     logging.info(
         f"JETTO (output={config_directory}, PID={process.pid}) terminated with return code {process.returncode}."
     )
