@@ -7,6 +7,8 @@
     </em>
 </p>
 
+This repository is currently under active development. It forms one part of my master's thesis on data-driven methods for tokamak control and design.
+
 ### Notes
 To build JINTRAC Singularity image from docker tgz
 ```
