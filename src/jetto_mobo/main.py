@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 
 import h5py
-import numpy as np
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -16,37 +15,45 @@ from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from jetto_mobo import ecrh, objective, utils
 
-# Argparse
+#################
+# PROGRAM SETUP #
+#################
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--output_dir",
     type=str,
-    default="data/YYYY-MM-DD-hhmmss",
-    help="Directory to store results in; a directory with the specified path will be created if it does not already exist.",
+    default=datetime.now().strftime("%Y-%m-%d-%H%M%S"),
+    help="Directory to store results in (default: ./YYYY-MM-DD-HHMMSS)",
 )
 parser.add_argument(
-    "--n_bayesopt_steps", type=int, default=6, help="Number of BayesOpt steps."
+    "--n_bayesopt_steps",
+    type=int,
+    default=3,
+    help="Number of BayesOpt steps (default: 3).",
 )
 parser.add_argument(
-    "--batch_size", type=int, default=5, help="Number of parallel JETTO runs."
+    "--batch_size",
+    type=int,
+    default=5,
+    help="Number of parallel JETTO runs (default: 5).",
 )
 parser.add_argument(
     "--n_restarts",
     type=int,
     default=10,
-    help="Number of points for multistart optimisation.",
+    help="Number of points for multistart optimisation (default: 10).",
 )
 parser.add_argument(
     "--raw_samples",
     type=int,
     default=512,
-    help="Number of samples to draw from acquisition function.",
+    help="Number of samples to draw from acquisition function (default: 512).",
 )
 parser.add_argument(
     "--n_sobol_samples",
     type=int,
     default=256,
-    help="Passed to SobolQMCNormalSampler as `sample_shape`.",
+    help="Passed to SobolQMCNormalSampler as `sample_shape` (default: 256).",
 )
 parser.add_argument(
     "--ecrh_function",
@@ -58,57 +65,80 @@ parser.add_argument(
         # "cubic_spline",
     ],
     default="piecewise_linear",
-    help="ECRH function to use.",
+    help="ECRH function to use (default: 'piecewise_linear').",
 )
 parser.add_argument(
     "--ecrh_function_config",
     type=str,
     default="{}",
-    help="Config JSON passed to ECRH function. Used to set fixed ECRH parameters.",
+    help="Config JSON passed to ECRH function, used to set fixed (non-optimisable) ECRH parameters (default: '{}').",
 )
 parser.add_argument(
     "--cost_function",
     type=str,
     choices=["scalar", "vector"],
     default="scalar",
-    help="Cost function to use.",
+    help="Cost function to use (default: 'scalar').",
 )
 parser.add_argument(
     "--jetto_fail_cost",
     type=float,
     default=1e3,
-    help="Value of cost function if JETTO fails.",
+    help="Value of cost function if JETTO fails (default: 1e3).",
 )
 parser.add_argument(
     "--jetto_timelimit",
     type=float,
     default=-1,
-    help="Maximum number of seconds to wait for JETTO to complete. If < 0, run until complete.",
+    help="Maximum number of seconds to wait for JETTO to complete; if < 0, run until complete (default: -1).",
+)
+parser.add_argument(
+    "--resume",
+    action="store_true",
+    help="Resume optimisation from `output_dir`.",
 )
 args = parser.parse_args()
+output_file = f"{args.output_dir}/bayesopt.hdf5"
 
-# Create output directory
-timestamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-if args.output_dir == "data/YYYY-MM-DD-hhmmss":
-    output_dir = f"data/{timestamp}"
+if args.resume:
+    # Load args from file
+    with h5py.File(output_file, "r") as f:
+        args.n_bayesopt_steps = f["/"].attrs["n_bayesopt_steps"]
+        args.batch_size = f["/"].attrs["batch_size"]
+        args.n_restarts = f["/"].attrs["n_restarts"]
+        args.raw_samples = f["/"].attrs["raw_samples"]
+        args.n_sobol_samples = f["/"].attrs["n_sobol_samples"]
+        args.ecrh_function = f["/"].attrs["ecrh_function"]
+        args.ecrh_function_config = f["/"].attrs["ecrh_function_config"]
+        args.cost_function = f["/"].attrs["cost_function"]
+        args.jetto_fail_cost = f["/"].attrs["jetto_fail_cost"]
+        args.jetto_timelimit = f["/"].attrs["jetto_timelimit"]
 else:
-    output_dir = args.output_dir
-i = 0
-while os.path.exists(output_dir):
-    output_dir = f"{output_dir}_{i}"
-os.makedirs(output_dir)
-output_filename = f"{output_dir}/{timestamp}.hdf5"
+    # Create directory
+    os.makedirs(args.output_dir)
+
+    # Save args to file
+    with h5py.File(output_file, "w") as f:
+        f["/"].attrs["n_bayesopt_steps"] = args.n_bayesopt_steps
+        f["/"].attrs["batch_size"] = args.batch_size
+        f["/"].attrs["n_restarts"] = args.n_restarts
+        f["/"].attrs["raw_samples"] = args.raw_samples
+        f["/"].attrs["n_sobol_samples"] = args.n_sobol_samples
+        f["/"].attrs["ecrh_function"] = args.ecrh_function
+        f["/"].attrs["ecrh_function_config"] = args.ecrh_function_config
+        f["/"].attrs["cost_function"] = args.cost_function
+        f["/"].attrs["jetto_fail_cost"] = args.jetto_fail_cost
+        f["/"].attrs["jetto_timelimit"] = args.jetto_timelimit
 
 # Set ECRH function
 ecrh_function_config = json.loads(args.ecrh_function_config)
-
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
 elif args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
-# elif args.ecrh_function == "cubic_spline":
+# elif ecrh_function == "cubic_spline":
 #     n_nodes = ecrh_function_config.get("n", 5)
 #     n_ecrh_parameters = n_nodes * 2
 #     ecrh_function = ecrh.cubic_spline
@@ -134,20 +164,6 @@ elif args.cost_function == "vector":
     cost_function = objective.vector_cost_function
     cost_dimension = 8
 
-# Save metadata
-with h5py.File(output_filename, "a") as f:
-    f["/"].attrs["output_dir"] = output_dir
-    f["/"].attrs["output_filename"] = output_filename
-    f["/"].attrs["n_bayesopt_steps"] = args.n_bayesopt_steps
-    f["/"].attrs["batch_size"] = args.batch_size
-    f["/"].attrs["n_restarts"] = args.n_restarts
-    f["/"].attrs["raw_samples"] = args.raw_samples
-    f["/"].attrs["n_sobol_samples"] = args.n_sobol_samples
-    f["/"].attrs["ecrh_function"] = args.ecrh_function
-    f["/"].attrs["cost_function"] = args.cost_function
-    f["/"].attrs["jetto_fail_cost"] = args.jetto_fail_cost
-    f["/"].attrs["jetto_timelimit"] = args.jetto_timelimit
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -161,27 +177,46 @@ logger = logging.getLogger()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.double
 
-# Gather initial data
-# TODO: handle if none converged
-logger.info("Gathering initial data...")
-ecrh_parameters = (
-    torch.rand([args.batch_size, n_ecrh_parameters]).detach().cpu().numpy()
-)
-utils.save_to_hdf5(output_filename, "initialisation/ecrh_parameters", ecrh_parameters)
-ecrh, q, cost = ecrh.get_batch_cost(
-    ecrh_parameters=ecrh_parameters,
-    batch_directory=f"{output_dir}/initialisation",
-    ecrh_function=ecrh_function,
-    cost_function=cost_function,
-)
-utils.save_to_hdf5(output_filename, "initialisation/converged_ecrh", ecrh)
-utils.save_to_hdf5(output_filename, "initialisation/converged_q", q)
-utils.save_to_hdf5(output_filename, "initialisation/cost", cost)
+##########################
+# ACQUIRE INITIAL POINTS #
+##########################
+if args.resume:
+    logger.info("Loading initialisation data from file...")
 
-# Bayesian optimisation
+    # TODO: also load completed bayesopt runs
+    ecrh_parameters = torch.tensor(
+        utils.load_from_hdf5(output_file, "initialisation/ecrh_parameters"),
+        device=device,
+        dtype=dtype,
+    )
+    cost = torch.tensor(
+        utils.load_from_hdf5(output_file, "initialisation/cost"),
+        device=device,
+        dtype=dtype,
+    )
+else:
+    logger.info("Gathering initial data...")
+
+    ecrh_parameters = (
+        torch.rand([args.batch_size, n_ecrh_parameters], dtype=dtype, device=device),
+    )
+    utils.save_to_hdf5(output_file, "initialisation/ecrh_parameters", ecrh_parameters)
+    converged_ecrh, converged_q, cost = ecrh.get_batch_cost(
+        ecrh_parameters=ecrh_parameters.detach().cpu().numpy(),
+        batch_directory=f"{args.output_dir}/initialisation",
+        ecrh_function=ecrh_function,
+        cost_function=cost_function,
+    )
+    # TODO: handle if none converged?
+    utils.save_to_hdf5(output_file, "initialisation/converged_ecrh", converged_ecrh)
+    utils.save_to_hdf5(output_file, "initialisation/converged_q", converged_q)
+    utils.save_to_hdf5(output_file, "initialisation/cost", cost)
+    cost = torch.tensor(cost, dtype=dtype, device=device)
+
+##############################
+# BAYESIAN OPTIMISATION LOOP #
+##############################
 logger.info("Starting BayesOpt...")
-cost = torch.tensor(cost, dtype=dtype, device=device)
-ecrh_parameters = torch.tensor(ecrh_parameters, dtype=dtype, device=device)
 for i in range(args.n_bayesopt_steps):
     # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation,
@@ -243,29 +278,24 @@ for i in range(args.n_bayesopt_steps):
             "maxiter": 200,  # Max number of local optimisation iterations per batch
         },
     )
-    new_ecrh_parameters = new_ecrh_parameters.detach()
+    new_ecrh_parameters_numpy = new_ecrh_parameters.detach().cpu().numpy()
     utils.save_to_hdf5(
-        output_filename,
+        output_file,
         f"bayesopt/{i}/ecrh_parameters",
-        new_ecrh_parameters.cpu().numpy(),
-    )
-    utils.save_to_hdf5(
-        output_filename,
-        f"bayesopt/{i}/target_ecrh",
-        ecrh_function(np.linspace(0, 1, 50), new_ecrh_parameters.cpu().numpy()),
+        new_ecrh_parameters_numpy,
     )
 
     # Observe cost values
     logger.info("Calculating cost of candidate points...")
     converged_ecrh, converged_q, new_cost = ecrh.get_batch_cost(
-        ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
-        batch_directory=f"{output_dir}/initialisation",
+        ecrh_parameters=new_ecrh_parameters_numpy,
+        batch_directory=f"{args.output_dir}/initialisation",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
     )
-    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/converged_ecrh", converged_ecrh)
-    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/converged_q", converged_q)
-    utils.save_to_hdf5(output_filename, f"bayesopt/{i}/cost", new_cost)
+    utils.save_to_hdf5(output_file, f"bayesopt/{i}/converged_ecrh", converged_ecrh)
+    utils.save_to_hdf5(output_file, f"bayesopt/{i}/converged_q", converged_q)
+    utils.save_to_hdf5(output_file, f"bayesopt/{i}/cost", new_cost)
 
     # Update
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
