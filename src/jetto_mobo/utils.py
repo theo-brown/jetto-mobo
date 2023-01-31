@@ -20,7 +20,7 @@ def load_from_hdf5(
     dataset_name: str,
 ) -> np.ndarray:
     with h5py.File(filename, "r") as f:
-        return np.ndarray(f[dataset_name][:])
+        return f[dataset_name][:]
 
 
 def pad_1d(a: Iterable[Optional[np.ndarray]], pad_value: float = np.nan) -> np.ndarray:
