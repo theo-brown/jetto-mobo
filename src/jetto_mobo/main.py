@@ -100,35 +100,32 @@ parser.add_argument(
 args = parser.parse_args()
 output_file = f"{args.output_dir}/bayesopt.hdf5"
 
+# Attributes to save/load from file
+file_attrs = [
+    "n_bayesopt_steps",
+    "batch_size",
+    "n_restarts",
+    "raw_samples",
+    "n_sobol_samples",
+    "ecrh_function",
+    "ecrh_function_config",
+    "cost_function",
+    "jetto_fail_cost",
+    "jetto_timelimit",
+]
+
 if args.resume:
     # Load args from file
     with h5py.File(output_file, "r") as f:
-        args.n_bayesopt_steps = f["/"].attrs["n_bayesopt_steps"]
-        args.batch_size = f["/"].attrs["batch_size"]
-        args.n_restarts = f["/"].attrs["n_restarts"]
-        args.raw_samples = f["/"].attrs["raw_samples"]
-        args.n_sobol_samples = f["/"].attrs["n_sobol_samples"]
-        args.ecrh_function = f["/"].attrs["ecrh_function"]
-        args.ecrh_function_config = f["/"].attrs["ecrh_function_config"]
-        args.cost_function = f["/"].attrs["cost_function"]
-        args.jetto_fail_cost = f["/"].attrs["jetto_fail_cost"]
-        args.jetto_timelimit = f["/"].attrs["jetto_timelimit"]
+        for arg in file_attrs:
+            setattr(args, arg, f["/"].attrs[arg])
 else:
     # Create directory
     os.makedirs(args.output_dir)
-
     # Save args to file
     with h5py.File(output_file, "w") as f:
-        f["/"].attrs["n_bayesopt_steps"] = args.n_bayesopt_steps
-        f["/"].attrs["batch_size"] = args.batch_size
-        f["/"].attrs["n_restarts"] = args.n_restarts
-        f["/"].attrs["raw_samples"] = args.raw_samples
-        f["/"].attrs["n_sobol_samples"] = args.n_sobol_samples
-        f["/"].attrs["ecrh_function"] = args.ecrh_function
-        f["/"].attrs["ecrh_function_config"] = args.ecrh_function_config
-        f["/"].attrs["cost_function"] = args.cost_function
-        f["/"].attrs["jetto_fail_cost"] = args.jetto_fail_cost
-        f["/"].attrs["jetto_timelimit"] = args.jetto_timelimit
+        for arg in file_attrs:
+            f["/"].attrs[args] = getattr(args, arg)
 
 # Set ECRH function
 ecrh_function_config = json.loads(args.ecrh_function_config)
