@@ -3,50 +3,80 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from jetto_mobo.utils import rgba_colormap
+
 
 def solution_batch(group: h5py.Group):
     figure = make_subplots(1, 2)
+    converged_cost = group["cost"][~np.isnan(group["cost"])]
+    max_cost = np.max(converged_cost)
+    min_cost = np.min(converged_cost)
 
     for i in range(len(group["ecrh_parameters"])):
+        if np.any(np.isnan(group["cost"][i])):
+            continue
+
+        color = rgba_colormap(group["cost"][i][0], min_cost, max_cost, "viridis")
         figure.add_traces(
             [
-                go.Scatter(
-                    x=np.linspace(0, 1, len(group["target_ecrh"][i])),
-                    # Rescale target_ecrh to match the converged value
-                    y=group["target_ecrh"][i] * np.max(group["converged_ecrh"][i]),
-                    name=str(i),
-                    line_dash="dot",
-                    line_color=group["cost"][i],
-                    coloraxis="cost",
-                ),
+                # go.Scatter(
+                #     x=np.linspace(0, 1, len(group["target_ecrh"][i])),
+                #     # Rescale target_ecrh to match the converged value
+                #     y=group["target_ecrh"][i] * np.max(group["converged_ecrh"][i]),
+                #     name=str(i),
+                #     line_dash="dot",
+                #     line_color=color,
+                # ),
                 go.Scatter(
                     x=np.linspace(0, 1, len(group["converged_ecrh"][i])),
                     y=group["converged_ecrh"][i],
                     name=str(i),
-                    line_color=group["cost"][i],
-                    coloraxis="cost",
+                    line_color=color,
+                    legendgroup=str(i),
+                    hovertemplate=f"Cost: {group['cost'][i][0]:.2f}",
                 ),
                 go.Scatter(
                     x=np.linspace(0, 1, len(group["converged_q"][i])),
                     y=group["converged_q"][i],
                     name=str(i),
-                    line_color=group["cost"][i],
-                    coloraxis="cost",
+                    line_color=color,
+                    legendgroup=str(i),
+                    showlegend=False,
+                    hovertemplate=f"Cost: {group['cost'][i][0]:.2f}",
                 ),
             ],
-            rows=[1, 1, 1],
-            cols=[1, 1, 2],
+            rows=[1, 1],
+            cols=[1, 2],
         )
-    figure.update_yaxis(title="ECRH power density", row=1, col=1)
-    figure.update_yaxis(title="Safety factor", row=1, col=2)
+    # Add colorbar
+    figure.add_trace(
+        go.Scatter(
+            x=[None],
+            y=[None],
+            mode="markers",
+            showlegend=False,
+            marker=dict(
+                colorscale="viridis",
+                showscale=True,
+                cmin=min_cost,
+                cmax=max_cost,
+                colorbar_title="Cost",
+                colorbar_titleside="top",
+                colorbar_outlinewidth=0,
+                colorbar_tickwidth=1,
+            ),
+            hoverinfo="none",
+        )
+    )
+    figure.update_yaxes(title="ECRH power density", row=1, col=1)
+    figure.update_yaxes(title="Safety factor", row=1, col=2)
+    figure.update_xaxes(title="Normalised radius")
     figure.update_layout(
         template="simple_white",
-        margin={"l": 0, "r": 0, "b": 50, "t": 0, "pad": 0},
-        show_legend=False,
-        legend_x=0.5,
+        margin={"l": 0, "r": 0, "b": 0, "t": 0, "pad": 0},
+        legend_title="Member",
+        legend_x=1.08,
         font_size=17,
-        xaxis_title="Normalised radius",
-        coloraxis_colorscale="viridis",
     )
 
     return figure
@@ -116,7 +146,8 @@ if __name__ == "__main__":
     with h5py.File(args.input_file, "r") as f:
         if args.mode == "solution":
             solution_batch(f["initialisation"]).show()
-            for i in range(len(f["bayesopt"])):
-                solution_batch(f["bayesopt/{i}"]).show()
+            if "bayesopt" in f.keys():
+                for i in range(len(f["bayesopt"])):
+                    solution_batch(f[f"bayesopt/{i}"]).show()
         elif args.mode == "progress":
             optimisation_progress(f).show()

@@ -2,6 +2,7 @@ from typing import Iterable, Optional
 
 import h5py
 import numpy as np
+from matplotlib import colormaps
 
 
 def save_to_hdf5(
@@ -30,3 +31,9 @@ def pad_1d(a: Iterable[Optional[np.ndarray]], pad_value: float = np.nan) -> np.n
         if r is not None:
             a_padded[i, : len(r)] = np.array(r)
     return a_padded
+
+
+def rgba_colormap(x: float, min_x: float, max_x: float, colormap_name: str) -> str:
+    colormap = colormaps[colormap_name]
+    color = colormap((x - min_x) / (max_x - min_x))
+    return f"rgba({int(255 * color[0])}, {int(255 * color[1])}, {int(255 * color[2])}, {color[3]})"
