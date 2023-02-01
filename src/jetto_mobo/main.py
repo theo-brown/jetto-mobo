@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 
 import h5py
+import numpy as np
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -29,7 +30,7 @@ parser.add_argument(
     "--n_bayesopt_steps",
     type=int,
     default=3,
-    help="Number of BayesOpt steps (default: 3).",
+    help="Number of BayesOpt steps to run (default: 3).",
 )
 parser.add_argument(
     "--batch_size",
@@ -102,7 +103,6 @@ output_file = f"{args.output_dir}/bayesopt.hdf5"
 
 # Attributes to save/load from file
 file_attrs = [
-    "n_bayesopt_steps",
     "batch_size",
     "n_restarts",
     "raw_samples",
@@ -119,13 +119,16 @@ if args.resume:
     with h5py.File(output_file, "r") as f:
         for arg in file_attrs:
             setattr(args, arg, f["/"].attrs[arg])
+        n_completed_bayesopt_steps = f["/"].attrs["n_completed_bayesopt_steps"]
 else:
     # Create directory
     os.makedirs(args.output_dir)
     # Save args to file
     with h5py.File(output_file, "w") as f:
         for arg in file_attrs:
-            f["/"].attrs[args] = getattr(args, arg)
+            f["/"].attrs[arg] = getattr(args, arg)
+        n_completed_bayesopt_steps = 0
+        f["/"].attrs[n_completed_bayesopt_steps] = n_completed_bayesopt_steps
 
 # Set ECRH function
 ecrh_function_config = json.loads(args.ecrh_function_config)
@@ -170,7 +173,6 @@ handler.setFormatter(
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.double
@@ -181,26 +183,45 @@ dtype = torch.double
 if args.resume:
     logger.info("Loading initialisation data from file...")
 
-    # TODO: also load completed bayesopt runs
-    ecrh_parameters = torch.tensor(
-        utils.load_from_hdf5(output_file, "initialisation/ecrh_parameters"),
-        device=device,
-        dtype=dtype,
-    )
-    cost = torch.tensor(
-        utils.load_from_hdf5(output_file, "initialisation/cost"),
-        device=device,
-        dtype=dtype,
-    )
+    with h5py.File(output_file, "r") as f:
+        ecrh_parameters = torch.tensor(
+            np.concatenate(
+                (
+                    f["initialisation/ecrh_parameters"][:],
+                    *[
+                        f[f"bayesopt/{i+1}/ecrh_parameters"][:]
+                        for i in range(n_completed_bayesopt_steps)
+                    ],
+                )
+            ),
+            device=device,
+            dtype=dtype,
+        )
+        cost = torch.tensor(
+            np.concatenate(
+                (
+                    f["initialisation/cost"][:],
+                    *[
+                        f[f"bayesopt/{i+1}/cost"][:]
+                        for i in range(n_completed_bayesopt_steps)
+                    ],
+                )
+            ),
+            device=device,
+            dtype=dtype,
+        )
 else:
     logger.info("Gathering initial data...")
 
-    ecrh_parameters = (
-        torch.rand([args.batch_size, n_ecrh_parameters], dtype=dtype, device=device),
+    ecrh_parameters = torch.rand(
+        [args.batch_size, n_ecrh_parameters], dtype=dtype, device=device
     )
-    utils.save_to_hdf5(output_file, "initialisation/ecrh_parameters", ecrh_parameters)
+    ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
+    utils.save_to_hdf5(
+        output_file, "initialisation/ecrh_parameters", ecrh_parameters_numpy
+    )
     converged_ecrh, converged_q, cost = ecrh.get_batch_cost(
-        ecrh_parameters=ecrh_parameters.detach().cpu().numpy(),
+        ecrh_parameters=ecrh_parameters_numpy,
         batch_directory=f"{args.output_dir}/initialisation",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
@@ -215,7 +236,12 @@ else:
 # BAYESIAN OPTIMISATION LOOP #
 ##############################
 logger.info("Starting BayesOpt...")
-for i in range(args.n_bayesopt_steps):
+for i in np.arange(
+    n_completed_bayesopt_steps + 1,
+    args.n_bayesopt_steps + n_completed_bayesopt_steps + 1,
+):
+    logger.info(f"# BayesOpt iteration {i} #")
+
     # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation,
     # we instead set the cost to a very large number.
@@ -277,24 +303,25 @@ for i in range(args.n_bayesopt_steps):
         },
     )
     new_ecrh_parameters_numpy = new_ecrh_parameters.detach().cpu().numpy()
-    utils.save_to_hdf5(
-        output_file,
-        f"bayesopt/{i}/ecrh_parameters",
-        new_ecrh_parameters_numpy,
-    )
 
     # Observe cost values
     logger.info("Calculating cost of candidate points...")
     converged_ecrh, converged_q, new_cost = ecrh.get_batch_cost(
         ecrh_parameters=new_ecrh_parameters_numpy,
-        batch_directory=f"{args.output_dir}/initialisation",
+        batch_directory=f"{args.output_dir}/bayesopt/{i}",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
     )
-    utils.save_to_hdf5(output_file, f"bayesopt/{i}/converged_ecrh", converged_ecrh)
-    utils.save_to_hdf5(output_file, f"bayesopt/{i}/converged_q", converged_q)
-    utils.save_to_hdf5(output_file, f"bayesopt/{i}/cost", new_cost)
 
-    # Update
+    # Update logged data
+    n_completed_bayesopt_steps += 1
+    with h5py.File(output_file, "a") as f:
+        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters_numpy
+        f[f"bayesopt/{i}/converged_ecrh"] = converged_ecrh
+        f[f"bayesopt/{i}/converged_q"] = converged_q
+        f[f"bayesopt/{i}/cost"] = new_cost
+        f["/"].attrs["n_completed_bayesopt_steps"] = n_completed_bayesopt_steps
+
+    # Update tensors for next BayesOpt
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
     cost = torch.cat([cost, torch.tensor(new_cost, dtype=dtype, device=device)])
