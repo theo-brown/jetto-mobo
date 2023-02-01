@@ -1,8 +1,18 @@
+import logging
+from datetime import datetime
 from typing import Iterable, Optional
 
 import h5py
 import numpy as np
 from matplotlib import colormaps
+
+
+class ElapsedTimeFormatter(logging.Formatter):
+    def format(self, record):
+        record.elapsed_time = datetime.utcfromtimestamp(
+            record.relativeCreated / 1000
+        ).strftime("%H:%M:%S")
+        return super().format(record)
 
 
 def save_to_hdf5(
