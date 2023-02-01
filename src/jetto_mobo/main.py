@@ -128,7 +128,7 @@ else:
         for arg in file_attrs:
             f["/"].attrs[arg] = getattr(args, arg)
         n_completed_bayesopt_steps = 0
-        f["/"].attrs[n_completed_bayesopt_steps] = n_completed_bayesopt_steps
+        f["/"].attrs["n_completed_bayesopt_steps"] = n_completed_bayesopt_steps
 
 # Set ECRH function
 ecrh_function_config = json.loads(args.ecrh_function_config)
