@@ -162,13 +162,14 @@ elif args.cost_function == "vector":
     cost_dimension = 8
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    style="{",
-    format="{asctime} [{levelname}] {message}",
-    datefmt="%H:%M:%S",
+logger = logging.getLogger("jetto-mobo")
+handler = logging.StreamHandler()
+handler.setFormatter(
+    utils.ElapsedTimeFormatter("%(name)s:t+%(elapsed_time)s:%(levelname)s %(message)s")
 )
-logger = logging.getLogger()
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
