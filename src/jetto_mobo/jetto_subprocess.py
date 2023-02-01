@@ -4,6 +4,16 @@ from typing import Iterable, Optional, Tuple, Union
 
 import netCDF4
 from jetto_tools.results import JettoResults
+from jetto_mobo import utils
+
+# Set up logging
+logger = logging.getLogger("jetto-subprocess")
+handler = logging.StreamHandler()
+handler.setFormatter(
+    utils.ElapsedTimeFormatter("%(name)s:t+%(elapsed_time)s:%(levelname)s %(message)s")
+)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 
 async def run(
@@ -51,17 +61,17 @@ async def run(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    logging.info(f"Starting JETTO in {config_directory} with PID {process.pid}.")
+    logger.info(f"Starting JETTO in {config_directory}.")
     try:
         await asyncio.wait_for(process.communicate(), timelimit)
     except TimeoutError:
-        logging.info(
-            f"JETTO (output={config_directory}, PID={process.pid}) killed (time limit of {timelimit}s exceeded)."
-        )
         process.kill()
+        logger.info(
+            f"JETTO in {config_directory} killed (time limit of {timelimit}s exceeded)."
+        )
 
-    logging.info(
-        f"JETTO (output={config_directory}, PID={process.pid}) terminated with return code {process.returncode}."
+    logger.info(
+        f"JETTO in {config_directory} terminated with return code {process.returncode}."
     )
 
     if process.returncode == 0:
