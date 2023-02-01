@@ -172,6 +172,7 @@ handler.setFormatter(
 )
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
+logger.info(f"Started at {datetime.now().strftime('%H:%M:%S')}.")
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
