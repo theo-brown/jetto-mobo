@@ -15,3 +15,5 @@ jetto/templates/*
 jetto/images/*
 jetto/runs/*
 data/*/jetto
+2023-*
+data/sum_of_gaussians/bayesopt/*
