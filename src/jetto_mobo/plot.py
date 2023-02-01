@@ -90,9 +90,9 @@ def optimisation_progress(hdf5_file: h5py.File):
     for bayesopt_step in hdf5_file["bayesopt"]:
         if "cost" in hdf5_file["bayesopt"][bayesopt_step]:
             cost = np.nan_to_num(hdf5_file["bayesopt"][bayesopt_step]["cost"], nan=1e3)
-            bayesopt_cost[int(bayesopt_step)] = np.min(cost)
+            bayesopt_cost[int(bayesopt_step)-1] = np.min(cost)
         else:
-            bayesopt_cost[int(bayesopt_step)] = None
+            bayesopt_cost[int(bayesopt_step)-1] = None
     figure.add_trace(
         go.Scatter(
             x=optimisation_step,
@@ -148,6 +148,6 @@ if __name__ == "__main__":
             solution_batch(f["initialisation"]).show()
             if "bayesopt" in f.keys():
                 for i in range(len(f["bayesopt"])):
-                    solution_batch(f[f"bayesopt/{i}"]).show()
+                    solution_batch(f[f"bayesopt/{i+1}"]).show()
         elif args.mode == "progress":
             optimisation_progress(f).show()
