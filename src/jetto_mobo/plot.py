@@ -1,8 +1,10 @@
 import h5py
 import numpy as np
 import plotly.graph_objects as go
+from jetto_tools.results import JettoResults
 from plotly.subplots import make_subplots
 
+from jetto_mobo.objective import scalar_cost_function
 from jetto_mobo.utils import rgba_colormap
 
 
@@ -84,15 +86,24 @@ def solution_batch(group: h5py.Group):
 
 def optimisation_progress(hdf5_file: h5py.File):
     figure = go.Figure()
-    optimisation_step = np.arange(len(hdf5_file["bayesopt"]))
-    bayesopt_cost = np.empty(len(hdf5_file["bayesopt"]))
+    optimisation_step = np.arange(len(hdf5_file["bayesopt"]) + 1)
+    bayesopt_cost = np.empty(len(hdf5_file["bayesopt"]) + 1)
 
+    # Load data from benchmark
+    benchmark = JettoResults(path="./data/benchmark")
+    benchmark_cost = scalar_cost_function(
+        benchmark.load_profiles(), benchmark.load_timetraces()
+    )
+
+    # Load data from hdf5
+    initial_cost = np.nan_to_num(hdf5_file["initialisation/cost"], nan=1e3)
+    bayesopt_cost[0] = np.min(initial_cost)
     for bayesopt_step in hdf5_file["bayesopt"]:
         if "cost" in hdf5_file["bayesopt"][bayesopt_step]:
             cost = np.nan_to_num(hdf5_file["bayesopt"][bayesopt_step]["cost"], nan=1e3)
-            bayesopt_cost[int(bayesopt_step)-1] = np.min(cost)
+            bayesopt_cost[int(bayesopt_step)] = np.min(cost)
         else:
-            bayesopt_cost[int(bayesopt_step)-1] = None
+            bayesopt_cost[int(bayesopt_step)] = None
     figure.add_trace(
         go.Scatter(
             x=optimisation_step,
@@ -101,7 +112,6 @@ def optimisation_progress(hdf5_file: h5py.File):
         )
     )
 
-    initial_cost = np.nan_to_num(hdf5_file["initialisation/cost"], nan=1e3)
     figure.add_trace(
         go.Scatter(
             x=optimisation_step,
@@ -110,6 +120,17 @@ def optimisation_progress(hdf5_file: h5py.File):
             mode="lines",
             line_color="black",
             line_dash="dot",
+        )
+    )
+
+    figure.add_trace(
+        go.Scatter(
+            x=optimisation_step,
+            y=np.ones(optimisation_step.shape) * benchmark_cost,
+            name="SPR45-v9",
+            mode="lines",
+            line_color="black",
+            line_dash="dash",
         )
     )
 
