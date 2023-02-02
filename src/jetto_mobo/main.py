@@ -178,6 +178,11 @@ logger.info(f"Started at {datetime.now().strftime('%H:%M:%S')}.")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.double
 
+# Log args
+logger.info(
+    "Running with args:\n" + "\n".join(f"{k}={v}" for k, v in vars(args).items())
+)
+
 ##########################
 # ACQUIRE INITIAL POINTS #
 ##########################
