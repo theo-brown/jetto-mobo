@@ -32,13 +32,16 @@ async def run(
         Path to a directory containing a JETTO configuration; output files will overwrite files in this directory.
 
     timelimit : Optional[Union[int, float]], default=None
-        Maximum number of seconds to wait for JETTO to complete. If `None`, run until complete.
+        Maximum number of seconds to wait for JETTO to complete. If `None` or < 0, run until complete.
 
     Returns
     -------
     Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]
         If JETTO converged in the timelimit (return code 0), returns `(profiles, timetraces)`; else returns `(None, None)`.
     """
+    if timelimit < 0:
+        timelimit = None
+        
     # Run name is only used internally in this container, so it doesn't matter what it's called
     run_name = "run"
     process = await asyncio.create_subprocess_exec(
@@ -65,15 +68,14 @@ async def run(
     logger.info(f"Starting JETTO in {config_directory}.")
     try:
         await asyncio.wait_for(process.communicate(), timelimit)
-    except TimeoutError:
-        logger.info(f"Time limit ({timelimit}s) exceeded).")
-    finally:
-        if process.returncode is None:
-            process.kill()
-
-    logger.info(
-        f"JETTO in {config_directory} terminated with return code {process.returncode}."
-    )
+        logger.info(
+            f"JETTO in {config_directory} terminated with return code {process.returncode}."
+        )
+    except asyncio.exceptions.TimeoutError:
+        logger.info(
+            f"JETTO in {config_directory} terminated: time limit ({timelimit}s) exceeded)."
+        )
+        process.kill()
 
     if process.returncode == 0:
         results = JettoResults(path=config_directory)
