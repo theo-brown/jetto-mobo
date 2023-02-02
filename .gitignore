@@ -13,7 +13,7 @@ venv/
 # JETTO images and data
 jetto/templates/*
 jetto/images/*
-jetto/runs/*
-data/*/jetto
 2023-*
 data/sum_of_gaussians/bayesopt/*
+data/sum_of_gaussians/initialisation/*
+data/benchmark/*
