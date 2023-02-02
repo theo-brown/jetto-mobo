@@ -4,6 +4,7 @@ from typing import Iterable, Optional, Tuple, Union
 
 import netCDF4
 from jetto_tools.results import JettoResults
+
 from jetto_mobo import utils
 
 # Set up logging
@@ -65,10 +66,10 @@ async def run(
     try:
         await asyncio.wait_for(process.communicate(), timelimit)
     except TimeoutError:
-        process.kill()
-        logger.info(
-            f"JETTO in {config_directory} killed (time limit of {timelimit}s exceeded)."
-        )
+        logger.info(f"Time limit ({timelimit}s) exceeded).")
+    finally:
+        if process.returncode is None:
+            process.kill()
 
     logger.info(
         f"JETTO in {config_directory} terminated with return code {process.returncode}."

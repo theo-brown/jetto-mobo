@@ -218,19 +218,19 @@ else:
         [args.batch_size, n_ecrh_parameters], dtype=dtype, device=device
     )
     ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
-    utils.save_to_hdf5(
-        output_file, "initialisation/ecrh_parameters", ecrh_parameters_numpy
-    )
     converged_ecrh, converged_q, cost = ecrh.get_batch_cost(
         ecrh_parameters=ecrh_parameters_numpy,
         batch_directory=f"{args.output_dir}/initialisation",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
+        timelimit=args.jetto_timelimit,
     )
     # TODO: handle if none converged?
-    utils.save_to_hdf5(output_file, "initialisation/converged_ecrh", converged_ecrh)
-    utils.save_to_hdf5(output_file, "initialisation/converged_q", converged_q)
-    utils.save_to_hdf5(output_file, "initialisation/cost", cost)
+    with h5py.File(output_file, "a") as f:
+        f["initialisation/ecrh_parameters"] = ecrh_parameters_numpy
+        f["initialisation/converged_ecrh"] = converged_ecrh
+        f["initialisation/converged_q"] = converged_q
+        f["initialisation/cost"] = cost
     cost = torch.tensor(cost, dtype=dtype, device=device)
 
 ##############################
@@ -312,6 +312,7 @@ for i in np.arange(
         batch_directory=f"{args.output_dir}/bayesopt/{i}",
         ecrh_function=ecrh_function,
         cost_function=cost_function,
+        timelimit=args.jetto_timelimit,
     )
 
     # Update logged data
