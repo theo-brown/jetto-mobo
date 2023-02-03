@@ -1,4 +1,7 @@
 jetto-tools
 botorch
 torch
-netcdf4
+netCDF4
+matplotlib
+plotly
+h5py
