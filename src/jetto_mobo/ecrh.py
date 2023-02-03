@@ -24,7 +24,6 @@ def sum_of_gaussians(
     variances: Iterable[float],
     amplitudes: Iterable[float],
 ) -> np.ndarray:
-
     if len(means) != len(variances) or len(means) != len(amplitudes):
         raise ValueError(
             "means, variances, amplitudes should be same length;"

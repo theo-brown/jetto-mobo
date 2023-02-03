@@ -14,7 +14,9 @@ class ElapsedTimeFormatter(logging.Formatter):
         return super().format(record)
 
 
-def get_logger(name: Optional[str] = None, level: Optional[int] = None)-> logging.Logger:
+def get_logger(
+    name: Optional[str] = None, level: Optional[int] = None
+) -> logging.Logger:
     logger = logging.getLogger(name)
     handler = logging.StreamHandler()
     handler.setFormatter(
