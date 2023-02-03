@@ -18,11 +18,6 @@ async def run(
 ) -> Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]:
     """Run JETTO in an async subprocess, using a new container with the given config.
 
-    Killing asyncio subprocesses can be temperamental (e.g. https://github.com/python/cpython/issues/88050),
-    as can killing Singularity containers (e.g. https://github.com/apptainer/singularity/issues/5884).
-    Although it's hacky, the most reliable way of killing a JETTO Singularity run seems to be to destroy the
-    container that is running it.
-
     Parameters
     ----------
     jetto_image : str
@@ -46,7 +41,9 @@ async def run(
     # Run name is only used internally in this container, so it doesn't matter what it's called
     run_name = "run_name"
 
-    logger = utils.get_logger(name=f"jetto-singularity-{container_id}", level=logging.INFO)
+    logger = utils.get_logger(
+        name=f"jetto-singularity-{container_id}", level=logging.INFO
+    )
 
     # Start a container
     # logger.info(f"Creating container...")
@@ -58,7 +55,7 @@ async def run(
         "--bind",
         "/tmp",
         "--bind",
-        f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the containers jetto run directory
+        f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the container's jetto run directory
         jetto_image,
         container_id,
         stdout=asyncio.subprocess.PIPE,
@@ -67,7 +64,7 @@ async def run(
     await create_container.wait()
 
     # Exec JETTO in the container
-    logger.info(f"Starting JETTO container...")
+    logger.info("Starting JETTO container...")
     run_jetto = await asyncio.create_subprocess_exec(
         "singularity",
         "exec",
@@ -89,8 +86,25 @@ async def run(
         await asyncio.wait_for(run_jetto.communicate(), timelimit)
         timeout = False
     except asyncio.TimeoutError:
-        timeout = True        
+        timeout = True
     finally:
+        # Kill JETTO
+        kill_jetto = await asyncio.create_subprocess_exec(
+            "singularity",
+            "exec",
+            # Container to execute command in
+            f"instance://{container_id}",
+            # Command to execute in container:
+            "touch",
+            f"/jetto/runs/{run_name}/kill",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        # Wait for kill command to complete
+        await kill_jetto.wait()
+        # Wait for JETTO to exit
+        await run_jetto.wait()
+
         # Close the container
         # logger.info("Closing container...")
         delete_container = await asyncio.create_subprocess_exec(
@@ -104,9 +118,11 @@ async def run(
         await delete_container.wait()
 
     logger.info(
-            f"JETTO container terminated with return code {run_jetto.returncode}"
-            + f" (timed out after {timelimit}s)." if timeout else "."
-        )
+        f"JETTO container terminated with return code {run_jetto.returncode}"
+        + f" (timed out after {timelimit}s)."
+        if timeout
+        else "."
+    )
 
     if run_jetto.returncode == 0:
         results = JettoResults(path=config_directory)
@@ -142,7 +158,12 @@ async def run_many(
     """
     return await asyncio.gather(
         *[
-            run(jetto_image, config_directory, timelimit, container_id=os.path.split(config_directory)[1])
+            run(
+                jetto_image,
+                config_directory,
+                timelimit,
+                container_id=os.path.split(config_directory)[1],
+            )
             for config_directory in config_directories
         ]
     )
