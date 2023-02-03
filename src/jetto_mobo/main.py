@@ -165,23 +165,15 @@ elif args.cost_function == "vector":
     cost_dimension = 8
 
 # Set up logging
-logger = logging.getLogger("jetto-mobo")
-handler = logging.StreamHandler()
-handler.setFormatter(
-    utils.ElapsedTimeFormatter("%(name)s:t+%(elapsed_time)s:%(levelname)s %(message)s")
-)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+logger = utils.get_logger("jetto-mobo", level=logging.INFO)
 logger.info(f"Started at {datetime.now().strftime('%H:%M:%S')}.")
+logger.info(
+    "Running with args:\n" + "\n".join(f"{k}={v}" for k, v in vars(args).items())
+)
 
 # Set up PyTorch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.double
-
-# Log args
-logger.info(
-    "Running with args:\n" + "\n".join(f"{k}={v}" for k, v in vars(args).items())
-)
 
 ##########################
 # ACQUIRE INITIAL POINTS #
@@ -241,12 +233,11 @@ else:
 ##############################
 # BAYESIAN OPTIMISATION LOOP #
 ##############################
-logger.info("Starting BayesOpt...")
 for i in np.arange(
     n_completed_bayesopt_steps + 1,
     args.n_bayesopt_steps + n_completed_bayesopt_steps + 1,
 ):
-    logger.info(f"# BayesOpt iteration {i} #")
+    logger.info(f"BayesOpt iteration {i}:")
 
     # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation,

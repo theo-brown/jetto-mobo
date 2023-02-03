@@ -14,6 +14,18 @@ class ElapsedTimeFormatter(logging.Formatter):
         return super().format(record)
 
 
+def get_logger(name: Optional[str] = None, level: Optional[int] = None)-> logging.Logger:
+    logger = logging.getLogger(name)
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        ElapsedTimeFormatter("t+%(elapsed_time)s:%(name)s:%(levelname)s %(message)s")
+    )
+    logger.addHandler(handler)
+    if level is not None:
+        logger.setLevel(level)
+    return logger
+
+
 def pad_1d(a: Iterable[Optional[np.ndarray]], pad_value: float = np.nan) -> np.ndarray:
     """Pad a ragged sequence of 1D arrays."""
     row_length = max([len(r) if r is not None else 0 for r in a])
