@@ -16,4 +16,6 @@ jetto/images/*
 2023-*
 data/sum_of_gaussians/bayesopt/*
 data/sum_of_gaussians/initialisation/*
+data/piecewise_linear/bayesopt/*
+data/piecewise_linear/initialisation/*
 data/benchmark/*
