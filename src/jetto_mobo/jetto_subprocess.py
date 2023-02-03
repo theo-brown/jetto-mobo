@@ -1,28 +1,27 @@
 import asyncio
 import logging
+import os
 from typing import Iterable, Optional, Tuple, Union
+from uuid import uuid4
 
 import netCDF4
 from jetto_tools.results import JettoResults
 
 from jetto_mobo import utils
 
-# Set up logging
-logger = logging.getLogger("jetto-subprocess")
-handler = logging.StreamHandler()
-handler.setFormatter(
-    utils.ElapsedTimeFormatter("%(name)s:t+%(elapsed_time)s:%(levelname)s %(message)s")
-)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
-
 
 async def run(
     jetto_image: str,
     config_directory: str,
     timelimit: Optional[Union[int, float]] = None,
+    container_id: Optional[str] = None,
 ) -> Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]:
-    """Run a JETTO Singularity container with the given config in an async subprocess.
+    """Run JETTO in an async subprocess, using a new container with the given config.
+
+    Killing asyncio subprocesses can be temperamental (e.g. https://github.com/python/cpython/issues/88050),
+    as can killing Singularity containers (e.g. https://github.com/apptainer/singularity/issues/5884).
+    Although it's hacky, the most reliable way of killing a JETTO Singularity run seems to be to destroy the
+    container that is running it.
 
     Parameters
     ----------
@@ -30,29 +29,50 @@ async def run(
         Path to the JETTO .sif Singularity container image.
     config_directory : str
         Path to a directory containing a JETTO configuration; output files will overwrite files in this directory.
-
     timelimit : Optional[Union[int, float]], default=None
         Maximum number of seconds to wait for JETTO to complete. If `None` or < 0, run until complete.
+    container_id : Optional[str], default=None
+        ID to give the Singularity container for this run. If `None`, Singularity container will be given a new UUID.
 
     Returns
     -------
     Tuple[Optional[netCDF4.Dataset], Optional[netCDF4.Dataset]]
-        If JETTO converged in the timelimit (return code 0), returns `(profiles, timetraces)`; else returns `(None, None)`.
+        If JETTO converged within the timelimit (return code 0), returns `(profiles, timetraces)`; else returns `(None, None)`.
     """
+    if container_id is None:
+        container_id = str(uuid4())
     if timelimit < 0:
         timelimit = None
-        
     # Run name is only used internally in this container, so it doesn't matter what it's called
-    run_name = "run"
-    process = await asyncio.create_subprocess_exec(
+    run_name = "run_name"
+
+    logger = utils.get_logger(name=f"jetto-singularity-{container_id}", level=logging.INFO)
+
+    # Start a container
+    # logger.info(f"Creating container...")
+    create_container = await asyncio.create_subprocess_exec(
         "singularity",
-        "exec",
+        "instance",
+        "start",
         "--cleanenv",  # Run in a clean environment (no env variables etc)
         "--bind",
         "/tmp",
         "--bind",
-        f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the container's jetto run directory
-        jetto_image,  # Container image
+        f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the containers jetto run directory
+        jetto_image,
+        container_id,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await create_container.wait()
+
+    # Exec JETTO in the container
+    logger.info(f"Starting JETTO container...")
+    run_jetto = await asyncio.create_subprocess_exec(
+        "singularity",
+        "exec",
+        # Container to execute command in
+        f"instance://{container_id}",
         # Command to execute in container:
         "rjettov",
         "-x64",
@@ -65,19 +85,30 @@ async def run(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    logger.info(f"Starting JETTO in {config_directory}.")
     try:
-        await asyncio.wait_for(process.communicate(), timelimit)
-        logger.info(
-            f"JETTO in {config_directory} terminated with return code {process.returncode}."
+        await asyncio.wait_for(run_jetto.communicate(), timelimit)
+        timeout = False
+    except asyncio.TimeoutError:
+        timeout = True        
+    finally:
+        # Close the container
+        # logger.info("Closing container...")
+        delete_container = await asyncio.create_subprocess_exec(
+            "singularity",
+            "instance",
+            "stop",
+            container_id,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-    except asyncio.exceptions.TimeoutError:
-        logger.info(
-            f"JETTO in {config_directory} terminated: time limit ({timelimit}s) exceeded)."
-        )
-        process.kill()
+        await delete_container.wait()
 
-    if process.returncode == 0:
+    logger.info(
+            f"JETTO container terminated with return code {run_jetto.returncode}"
+            + f" (timed out after {timelimit}s)." if timeout else "."
+        )
+
+    if run_jetto.returncode == 0:
         results = JettoResults(path=config_directory)
         profiles = results.load_profiles()
         timetraces = results.load_timetraces()
@@ -111,7 +142,7 @@ async def run_many(
     """
     return await asyncio.gather(
         *[
-            run(jetto_image, config_directory, timelimit)
+            run(jetto_image, config_directory, timelimit, container_id=os.path.split(config_directory)[1])
             for config_directory in config_directories
         ]
     )
