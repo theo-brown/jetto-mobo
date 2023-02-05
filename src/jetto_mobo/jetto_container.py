@@ -42,7 +42,7 @@ async def run(
     run_name = "run_name"
 
     logger = utils.get_logger(
-        name=f"jetto-singularity-{container_id}", level=logging.INFO
+        name=f"jetto-mobo.container.{container_id}", level=logging.INFO
     )
 
     # Start a container
@@ -88,23 +88,6 @@ async def run(
     except asyncio.TimeoutError:
         timeout = True
     finally:
-        # Kill JETTO
-        kill_jetto = await asyncio.create_subprocess_exec(
-            "singularity",
-            "exec",
-            # Container to execute command in
-            f"instance://{container_id}",
-            # Command to execute in container:
-            "touch",
-            f"/jetto/runs/{run_name}/kill",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        # Wait for kill command to complete
-        await kill_jetto.wait()
-        # Wait for JETTO to exit
-        await run_jetto.wait()
-
         # Close the container
         # logger.info("Closing container...")
         delete_container = await asyncio.create_subprocess_exec(
@@ -119,12 +102,12 @@ async def run(
 
     logger.info(
         f"JETTO container terminated with return code {run_jetto.returncode}"
-        + f" (timed out after {timelimit}s)."
+        + (f" (timed out after {timelimit}s)."
         if timeout
-        else "."
+        else ".")
     )
 
-    if run_jetto.returncode == 0:
+    if run_jetto.returncode == 0 and not timeout:
         results = JettoResults(path=config_directory)
         profiles = results.load_profiles()
         timetraces = results.load_timetraces()
