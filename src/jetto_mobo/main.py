@@ -63,7 +63,7 @@ parser.add_argument(
         "piecewise_linear",
         "sum_of_gaussians",
         "piecewise_linear_2",
-        # "cubic_spline",
+        "sigmoid_spline",
     ],
     default="piecewise_linear",
     help="ECRH function to use (default: 'piecewise_linear').",
@@ -138,10 +138,9 @@ if args.ecrh_function == "piecewise_linear":
 elif args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
-# elif ecrh_function == "cubic_spline":
-#     n_nodes = ecrh_function_config.get("n", 5)
-#     n_ecrh_parameters = n_nodes * 2
-#     ecrh_function = ecrh.cubic_spline
+elif ecrh_function == "cubic_spline":
+    n_ecrh_parameters = 12
+    ecrh_function = ecrh.sigmoid_cubic_spline
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = ecrh_function_config.get("n", 5)
     variance = ecrh_function_config.get("variance", 0.0025)
