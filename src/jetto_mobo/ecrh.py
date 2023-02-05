@@ -6,10 +6,9 @@ import jetto_tools
 import netCDF4
 import numpy as np
 from jetto_tools.results import JettoResults
+from scipy.interpolate import interp1d
 
 from jetto_mobo import jetto_container, utils
-
-# from scipy.interpolate import CubicSpline
 
 
 def _gaussian(
@@ -134,17 +133,20 @@ def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.nd
     return np.interp(x, node_xs, node_ys)
 
 
-# def cubic_spline(x: Iterable[float], parameters: Iterable[float]):
-#     if len(parameters) % 2 != 0:
-#         raise ValueError("Must have an even number of parameters.")
-#     padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
-#     n_nodes = len(padded_parameters) // 2
-#     node_xs = padded_parameters[:n_nodes]
-#     node_ys = padded_parameters[n_nodes:]
-#     # Spline requires increasing x
-#     sorted_indices = np.argsort(node_xs)
-#     f = CubicSpline(node_xs[sorted_indices], node_ys[sorted_indices], bc_type="clamped")
-#     return f(x)
+def _sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def sigmoid_cubic_spline(x: Iterable[float], parameters: Iterable[float]):
+    if len(parameters) % 2 != 0:
+        raise ValueError("Must have an even number of parameters.")
+    n_nodes = (len(parameters) + 2) // 2
+
+    node_xs = np.concatenate([[0], parameters[: n_nodes - 2], [1]])
+    node_ys = parameters[n_nodes - 2 :]
+
+    spline = interp1d(node_xs, node_ys, kind="cubic")
+    return _sigmoid(spline(x))
 
 
 def create_config(
