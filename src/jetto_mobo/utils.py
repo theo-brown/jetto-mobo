@@ -18,11 +18,12 @@ def get_logger(
     name: Optional[str] = None, level: Optional[int] = None
 ) -> logging.Logger:
     logger = logging.getLogger(name)
-    handler = logging.StreamHandler()
-    handler.setFormatter(
-        ElapsedTimeFormatter("t+%(elapsed_time)s:%(name)s:%(levelname)s %(message)s")
-    )
-    logger.addHandler(handler)
+    if not logger.hasHandlers():
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            ElapsedTimeFormatter("t+%(elapsed_time)s:%(name)s:%(levelname)s %(message)s")
+        )
+        logger.addHandler(handler)
     if level is not None:
         logger.setLevel(level)
     return logger
