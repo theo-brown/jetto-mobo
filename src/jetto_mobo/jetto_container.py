@@ -102,9 +102,7 @@ async def run(
 
     logger.info(
         f"JETTO container terminated with return code {run_jetto.returncode}"
-        + (f" (timed out after {timelimit}s)."
-        if timeout
-        else ".")
+        + (f" (timed out after {timelimit}s)." if timeout else ".")
     )
 
     if run_jetto.returncode == 0 and not timeout:
