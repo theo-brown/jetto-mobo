@@ -7,7 +7,7 @@ import netCDF4
 import numpy as np
 from jetto_tools.results import JettoResults
 
-from jetto_mobo import jetto_subprocess, utils
+from jetto_mobo import jetto_container, utils
 
 # from scipy.interpolate import CubicSpline
 
@@ -193,7 +193,7 @@ def get_batch_cost(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute the given cost function for each element in a batch array of ECRH parameters.
 
-    This function uses `jetto_subprocess.run_many` to asynchronously run a batch of JETTO runs, one for each element of the batch.
+    This function uses `jetto_container.run_many` to asynchronously run a batch of JETTO runs, one for each element of the batch.
 
     Parameters
     ----------
@@ -236,7 +236,7 @@ def get_batch_cost(
 
     # Run asynchronously in parallel
     batch_output = asyncio.run(
-        jetto_subprocess.run_many(jetto_image, config_directories, timelimit)
+        jetto_container.run_many(jetto_image, config_directories, timelimit)
     )
 
     # Parse outputs
