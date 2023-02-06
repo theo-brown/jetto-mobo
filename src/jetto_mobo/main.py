@@ -138,7 +138,7 @@ if args.ecrh_function == "piecewise_linear":
 elif args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
-elif ecrh_function == "cubic_spline":
+elif args.ecrh_function == "sigmoid_spline":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.sigmoid_cubic_spline
 elif args.ecrh_function == "sum_of_gaussians":
@@ -153,7 +153,6 @@ elif args.ecrh_function == "sum_of_gaussians":
             [variance] * n_gaussians,  # variances
             params[n_gaussians:],  # amplitudes
         )
-
 
 # Set cost function
 if args.cost_function == "scalar":
