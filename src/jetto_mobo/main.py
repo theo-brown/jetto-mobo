@@ -61,8 +61,10 @@ parser.add_argument(
     type=str,
     choices=[
         "piecewise_linear",
-        "sum_of_gaussians",
         "piecewise_linear_2",
+        "piecewise_linear_3",
+        "sum_of_gaussians",
+        "sum_of_gaussians_2",
         "sigmoid_spline",
     ],
     default="piecewise_linear",
@@ -138,6 +140,9 @@ if args.ecrh_function == "piecewise_linear":
 elif args.ecrh_function == "piecewise_linear_2":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear_2
+elif args.ecrh_function == "piecewise_linear_3":
+    n_ecrh_parameters = 12
+    ecrh_function = ecrh.piecewise_linear_3
 elif args.ecrh_function == "sigmoid_spline":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.sigmoid_cubic_spline
@@ -153,6 +158,10 @@ elif args.ecrh_function == "sum_of_gaussians":
             [variance] * n_gaussians,  # variances
             params[n_gaussians:],  # amplitudes
         )
+
+elif args.ecrh_function == "sum_of_gaussians_2":
+    n_ecrh_parameters = 10
+    ecrh_function = ecrh.sum_of_gaussians_2
 
 # Set cost function
 if args.cost_function == "scalar":

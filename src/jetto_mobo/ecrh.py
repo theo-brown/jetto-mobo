@@ -34,6 +34,26 @@ def sum_of_gaussians(
     )
 
 
+def sum_of_gaussians_2(
+    x: Iterable[float], parameters: Iterable[float], variance: float = 0.0025
+) -> np.ndarray:
+    if len(parameters) % 2 != 0:
+        raise ValueError("Must have an even number of parameters.")
+
+    n_gaussians = len(parameters) // 2
+
+    relative_means = parameters[:n_gaussians]
+    amplitudes = parameters[n_gaussians:]
+
+    true_means = np.empty(n_gaussians)
+    for i in range(n_gaussians):
+        true_means[-i] = np.prod(relative_means[-i:])
+
+    return np.sum(
+        [_gaussian(x, m, variance, a) for m, a in zip(true_means, amplitudes)], axis=0
+    )
+
+
 def piecewise_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
     if len(parameters) != 12:
         raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
@@ -106,7 +126,7 @@ def piecewise_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndar
 
 
 def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
-    """Simple 6-segment piecewise linear function.
+    """Piecewise linear with 7 nodes, specifying (x,y) of each node.
 
     Parameters
     ----------
@@ -130,6 +150,35 @@ def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.nd
     padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
     node_xs = padded_parameters[:7]
     node_ys = padded_parameters[7:]
+    return np.interp(x, node_xs, node_ys)
+
+
+def piecewise_linear_3(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
+    """Piecewise linear, with points evenly spaced in `[0, parameters[0]]`, with ys specified by `[*parameters[1:], 0]`.
+
+    Parameters
+    ----------
+    x : Iterable[float]
+        Input array; currently needs to be [0, 1].
+    parameters : Iterable[float]
+        12 parameters, each [0, 1].
+
+    Returns
+    -------
+    np.ndarray
+        Piecewise linear function evaluated on x.
+
+    Raises
+    ------
+    ValueError
+        If `len(parameters) < 2`.
+    """
+    if len(parameters) < 2:
+        raise ValueError(f"Expected at least 2 parameters, got {len(parameters)}.")
+
+    end_node_x = parameters[0]
+    node_ys = np.concatenate([parameters[1:], [0]])
+    node_xs = np.linspace(0, end_node_x, len(parameters))
     return np.interp(x, node_xs, node_ys)
 
 
