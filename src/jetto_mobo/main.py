@@ -166,7 +166,8 @@ elif args.ecrh_function == "sum_of_gaussians":
 
 elif args.ecrh_function == "sum_of_gaussians_2":
     n_ecrh_parameters = 10
-    ecrh_function = ecrh.sum_of_gaussians_2
+    variance = ecrh_function_config.get("variance", 0.0025)
+    ecrh_function = lambda x, p: ecrh.sum_of_gaussians_2(x, p, variance)
 ecrh_parameter_bounds = torch.tensor(
     [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
     dtype=dtype,
