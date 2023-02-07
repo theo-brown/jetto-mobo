@@ -26,7 +26,7 @@ def get_benchmark_data(path: str):
 
 def animation(
     input_filename: str,
-    output_filename: str,
+    output_dir: str,
     title: str,
     benchmark_path: str = "./data/benchmark",
     cost_range=[0, 30],
@@ -248,11 +248,10 @@ def animation(
 
             frames.append(figure)
 
-    os.makedirs(output_filename)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     for i, frame in enumerate(frames):
-        frame.write_image(
-            f"{output_filename}/{i:02}.png", width=1920, height=1080, scale=1
-        )
+        frame.write_image(f"{output_dir}/{i:02}.png", width=1920, height=1080, scale=1)
 
 
 if __name__ == "__main__":
