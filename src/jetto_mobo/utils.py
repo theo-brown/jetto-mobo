@@ -21,7 +21,9 @@ def get_logger(
     if not logger.hasHandlers():
         handler = logging.StreamHandler()
         handler.setFormatter(
-            ElapsedTimeFormatter("t+%(elapsed_time)s:%(name)s:%(levelname)s %(message)s")
+            ElapsedTimeFormatter(
+                "t+%(elapsed_time)s:%(name)s:%(levelname)s %(message)s"
+            )
         )
         logger.addHandler(handler)
     if level is not None:
@@ -39,7 +41,9 @@ def pad_1d(a: Iterable[Optional[np.ndarray]], pad_value: float = np.nan) -> np.n
     return a_padded
 
 
-def rgba_colormap(x: float, min_x: float, max_x: float, colormap_name: str) -> str:
+def rgba_colormap(
+    x: float, min_x: float, max_x: float, colormap_name: str, alpha: float = 1
+) -> str:
     colormap = colormaps[colormap_name]
     color = colormap((x - min_x) / (max_x - min_x))
-    return f"rgba({int(255 * color[0])}, {int(255 * color[1])}, {int(255 * color[2])}, {color[3]})"
+    return f"rgba({int(255 * color[0])}, {int(255 * color[1])}, {int(255 * color[2])}, {alpha})"
