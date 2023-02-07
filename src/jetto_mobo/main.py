@@ -9,9 +9,10 @@ import numpy as np
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
-from botorch.models import SingleTaskGP  # Maybe use a different one?
+from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf
 from botorch.sampling.normal import SobolQMCNormalSampler
+from botorch.utils.sampling import draw_sobol_samples
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
 from jetto_mobo import ecrh, objective, utils
@@ -79,7 +80,7 @@ parser.add_argument(
 parser.add_argument(
     "--cost_function",
     type=str,
-    choices=["scalar", "vector"],
+    choices=["scalar"],
     default="scalar",
     help="Cost function to use (default: 'scalar').",
 )
@@ -101,9 +102,13 @@ parser.add_argument(
     help="Resume optimisation from `output_dir`.",
 )
 args = parser.parse_args()
-output_file = f"{args.output_dir}/bayesopt.hdf5"
+
+# Set up PyTorch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+dtype = torch.double
 
 # Attributes to save/load from file
+output_file = f"{args.output_dir}/bayesopt.hdf5"
 file_attrs = [
     "batch_size",
     "n_restarts",
@@ -162,14 +167,19 @@ elif args.ecrh_function == "sum_of_gaussians":
 elif args.ecrh_function == "sum_of_gaussians_2":
     n_ecrh_parameters = 10
     ecrh_function = ecrh.sum_of_gaussians_2
+ecrh_parameter_bounds = torch.tensor(
+    [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
+    dtype=dtype,
+    device=device,
+)
 
 # Set cost function
 if args.cost_function == "scalar":
     cost_function = objective.scalar_cost_function
     cost_dimension = 1
-elif args.cost_function == "vector":
-    cost_function = objective.vector_cost_function
-    cost_dimension = 8
+# elif args.cost_function == "vector":
+# cost_function = objective.vector_cost_function
+# cost_dimension = 8
 
 # Set up logging
 logger = utils.get_logger("jetto-mobo", level=logging.INFO)
@@ -177,10 +187,6 @@ logger.info(f"Started at {datetime.now().strftime('%H:%M:%S')}.")
 logger.info(
     "Running with args:\n" + "\n".join(f"{k}={v}" for k, v in vars(args).items())
 )
-
-# Set up PyTorch
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dtype = torch.double
 
 ##########################
 # ACQUIRE INITIAL POINTS #
@@ -217,10 +223,9 @@ if args.resume:
         )
 else:
     logger.info("Gathering initial data...")
-
-    ecrh_parameters = torch.rand(
-        [args.batch_size, n_ecrh_parameters], dtype=dtype, device=device
-    )
+    ecrh_parameters = draw_sobol_samples(
+        ecrh_parameter_bounds, n=args.batch_size, q=n_ecrh_parameters
+    ).squeeze(-1)
     ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
     converged_ecrh, converged_q, cost = ecrh.get_batch_cost(
         ecrh_parameters=ecrh_parameters_numpy,
@@ -229,7 +234,11 @@ else:
         cost_function=cost_function,
         timelimit=args.jetto_timelimit,
     )
-    # TODO: handle if none converged?
+    if np.all(np.isnan(cost)):
+        raise RuntimeError(
+            "Failed to generate initial values; all initial points failed to converge."
+        )
+
     with h5py.File(output_file, "a") as f:
         f["initialisation/ecrh_parameters"] = ecrh_parameters_numpy
         f["initialisation/converged_ecrh"] = converged_ecrh
@@ -248,8 +257,13 @@ for i in np.arange(
 
     # If a run failed, it will produce a NaN cost.
     # To enable us to perform gradient-based optimisation,
-    # we instead set the cost to a very large number.
-    cost[cost.isnan()] = args.jetto_fail_cost
+    # we either set drop these runs, or set the
+    # corresponding cost to a very large number.
+    if args.jetto_fail_cost is not None:
+        cost[cost.isnan()] = args.jetto_fail_cost
+    else:
+        cost = cost[~cost.isnan()]
+        ecrh_parameters = ecrh_parameters[~cost.isnan()]
 
     # Initialise surrogate model
     # BoTorch performs maximisation, so need to use -cost
@@ -265,7 +279,7 @@ for i in np.arange(
     # (low-discrepancy = on average, samples are evenly distributed to cover the space)
     # BoTorch recommends using Sobol because it produces lower variance gradient estimates
     # with much fewer samples [https://botorch.org/docs/samplers]
-    qNEI = qNoisyExpectedImprovement(
+    acquisition_function = qNoisyExpectedImprovement(
         model=model,
         X_baseline=ecrh_parameters,
         sampler=SobolQMCNormalSampler(sample_shape=torch.Size([args.n_sobol_samples])),
@@ -292,12 +306,8 @@ for i in np.arange(
     # https://github.com/pytorch/botorch/issues/366#issuecomment-581951153
     logger.info("Selecting candidates using acquisition function...")
     new_ecrh_parameters, _ = optimize_acqf(
-        acq_function=qNEI,
-        bounds=torch.tensor(
-            [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
-            dtype=dtype,
-            device=device,
-        ),
+        acq_function=acquisition_function,
+        bounds=ecrh_parameter_bounds,
         q=args.batch_size,  # Number of final points to generate
         raw_samples=args.raw_samples,  # Number of points to sample from acqf
         num_restarts=args.n_restarts,  # Number of starting points for multistart optimisation
