@@ -1,6 +1,7 @@
 import os
 
 import h5py
+import imageio.v3 as iio
 import numpy as np
 import plotly
 import plotly.graph_objects as go
@@ -29,7 +30,7 @@ def animation(
     output_dir: str,
     title: str,
     benchmark_path: str = "./data/benchmark",
-    cost_range=[0, 30],
+    cost_range=[3, 20],
 ):
     benchmark = get_benchmark_data(benchmark_path)
 
@@ -250,8 +251,14 @@ def animation(
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    filenames = []
     for i, frame in enumerate(frames):
-        frame.write_image(f"{output_dir}/{i:02}.png", width=1920, height=1080, scale=1)
+        filename = f"{output_dir}/{i:02}.png"
+        frame.write_image(filename, width=1920, height=1080, scale=1)
+        filenames.append(filename)
+
+    images = [iio.imread(f) for f in filenames]
+    iio.imwrite(f"{output_dir}/animation.gif", images, duration=1000, loop=True)
 
 
 if __name__ == "__main__":
