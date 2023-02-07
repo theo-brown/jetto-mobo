@@ -224,8 +224,8 @@ if args.resume:
 else:
     logger.info("Gathering initial data...")
     ecrh_parameters = draw_sobol_samples(
-        ecrh_parameter_bounds, n=args.batch_size, q=n_ecrh_parameters
-    ).squeeze(-1)
+        ecrh_parameter_bounds, n=1, q=args.batch_size
+    ).squeeze()
     ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
     converged_ecrh, converged_q, cost = ecrh.get_batch_cost(
         ecrh_parameters=ecrh_parameters_numpy,
