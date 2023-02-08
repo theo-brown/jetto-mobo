@@ -45,60 +45,61 @@ async def run(
         name=f"jetto-mobo.container.{container_id}", level=logging.INFO
     )
 
-    # Start a container
-    # logger.info(f"Creating container...")
-    create_container = await asyncio.create_subprocess_exec(
-        "singularity",
-        "instance",
-        "start",
-        "--cleanenv",  # Run in a clean environment (no env variables etc)
-        "--bind",
-        "/tmp",
-        "--bind",
-        f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the container's jetto run directory
-        jetto_image,
-        container_id,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    await create_container.wait()
-
-    # Exec JETTO in the container
-    logger.info("Starting JETTO container...")
-    run_jetto = await asyncio.create_subprocess_exec(
-        "singularity",
-        "exec",
-        # Container to execute command in
-        f"instance://{container_id}",
-        # Command to execute in container:
-        "rjettov",
-        "-x64",
-        "-S",
-        "-p0",
-        "-n1",
-        run_name,
-        "build",
-        "docker",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    try:
-        await asyncio.wait_for(run_jetto.communicate(), timelimit)
-        timeout = False
-    except asyncio.TimeoutError:
-        timeout = True
-    finally:
-        # Close the container
-        # logger.info("Closing container...")
-        delete_container = await asyncio.create_subprocess_exec(
+    with open(f"{config_directory}/singularity.log", 'a') as log_file:
+        # Start a container
+        # logger.info(f"Creating container...")
+        create_container = await asyncio.create_subprocess_exec(
             "singularity",
             "instance",
-            "stop",
+            "start",
+            "--cleanenv",  # Run in a clean environment (no env variables etc)
+            "--bind",
+            "/tmp",
+            "--bind",
+            f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the container's jetto run directory
+            jetto_image,
             container_id,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+                stdout=log_file,
+                stderr=asyncio.subprocess.STDOUT,
         )
-        await delete_container.wait()
+        await create_container.wait()
+
+        # Exec JETTO in the container
+        logger.info("Starting JETTO container...")
+        run_jetto = await asyncio.create_subprocess_exec(
+            "singularity",
+            "exec",
+            # Container to execute command in
+            f"instance://{container_id}",
+            # Command to execute in container:
+            "rjettov",
+            "-x64",
+            "-S",
+            "-p0",
+            "-n1",
+            run_name,
+            "build",
+            "docker",
+                stdout=log_file,
+                stderr=asyncio.subprocess.STDOUT,
+        )
+        try:
+            await asyncio.wait_for(run_jetto.communicate(), timelimit)
+            timeout = False
+        except asyncio.TimeoutError:
+            timeout = True
+        finally:
+            # Close the container
+            # logger.info("Closing container...")
+            delete_container = await asyncio.create_subprocess_exec(
+                "singularity",
+                "instance",
+                "stop",
+                container_id,
+                stdout=log_file,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            await delete_container.wait()
 
     logger.info(
         f"JETTO container terminated with return code {run_jetto.returncode}"
