@@ -342,6 +342,5 @@ for i in np.arange(
         f["/"].attrs["n_completed_bayesopt_steps"] = n_completed_bayesopt_steps
 
     # Update tensors for next BayesOpt
-    # TODO Check behaviour when all runs failed to converge
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
     cost = torch.cat([cost, torch.tensor(new_cost, dtype=dtype, device=device)])
