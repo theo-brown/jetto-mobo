@@ -313,11 +313,14 @@ for i in np.arange(
         raw_samples=args.raw_samples,  # Number of points to sample from acqf
         num_restarts=args.n_restarts,  # Number of starting points for multistart optimisation
         options={
+            # TODO Add to args
             "batch_limit": 5,  # Batch size for local optimisation
             "maxiter": 200,  # Max number of local optimisation iterations per batch
         },
     )
     new_ecrh_parameters_numpy = new_ecrh_parameters.detach().cpu().numpy()
+
+    # TODO Get templates from previous points
 
     # Observe cost values
     logger.info("Calculating cost of candidate points...")
@@ -339,5 +342,6 @@ for i in np.arange(
         f["/"].attrs["n_completed_bayesopt_steps"] = n_completed_bayesopt_steps
 
     # Update tensors for next BayesOpt
+    # TODO Check behaviour when all runs failed to converge
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
     cost = torch.cat([cost, torch.tensor(new_cost, dtype=dtype, device=device)])
