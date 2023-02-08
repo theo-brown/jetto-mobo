@@ -305,9 +305,9 @@ def get_batch_cost(
             converged_outputs.append(profiles["Q"][-1])
             costs.append(cost_function(profiles, timetraces))
         else:
-            converged_inputs.append(None)
-            converged_outputs.append(None)
-            costs.append(None)
+            converged_inputs.append([None])
+            converged_outputs.append([None])
+            costs.append([None])
 
     return (
         utils.pad_1d(converged_inputs),
