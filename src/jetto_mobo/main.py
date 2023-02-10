@@ -319,7 +319,9 @@ for i in np.arange(
         },
     )
     new_ecrh_parameters_numpy = new_ecrh_parameters.detach().cpu().numpy()
-
+    with h5py.File(output_file, "a") as f:
+        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters_numpy
+        
     # TODO Get templates from previous points
 
     # Observe cost values
@@ -333,9 +335,9 @@ for i in np.arange(
     )
 
     # Update logged data
+    # TODO tidy resume if computing cost failed
     n_completed_bayesopt_steps += 1
     with h5py.File(output_file, "a") as f:
-        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters_numpy
         f[f"bayesopt/{i}/converged_ecrh"] = converged_ecrh
         f[f"bayesopt/{i}/converged_q"] = converged_q
         f[f"bayesopt/{i}/cost"] = new_cost
