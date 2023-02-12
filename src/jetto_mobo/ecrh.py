@@ -303,7 +303,7 @@ def get_batch_value(
             # Save to arrays
             converged_inputs.append(profiles["QECE"][-1])
             converged_outputs.append(profiles["Q"][-1])
-            values.append(value_function(profiles, timetraces))
+            values.append(np.atleast_1d(value_function(profiles, timetraces)))
         else:
             converged_inputs.append([None])
             converged_outputs.append([None])

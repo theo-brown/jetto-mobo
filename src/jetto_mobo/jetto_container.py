@@ -3,10 +3,10 @@ import logging
 import os
 from typing import Iterable, Optional, Tuple, Union
 from uuid import uuid4
-
+import tarfile
 import netCDF4
 from jetto_tools.results import JettoResults
-
+import shutil
 from jetto_mobo import utils
 
 
@@ -107,9 +107,15 @@ async def run(
     )
 
     if run_jetto.returncode == 0 and not timeout:
+        # Create CDF files
         results = JettoResults(path=config_directory)
         profiles = results.load_profiles()
         timetraces = results.load_timetraces()
+
+    # Compress
+    compress_jetto_dir(config_directory)
+
+    if run_jetto.returncode == 0 and not timeout:
         return profiles, timetraces
     else:
         return None, None
@@ -149,3 +155,34 @@ async def run_many(
             for config_directory in config_directories
         ]
     )
+
+
+def compress_jetto_dir(directory: str, delete: bool = True):
+    """Compress a JettoResults directory into a tar.bz2 archive.
+
+    If `delete=True`, all uncompressed files will be deleted except from *.CDF, *.log, and *.bz2.
+
+    Parameters
+    ----------
+    directory: str
+        Path to JettoResults directory. Output tar file `jetto_results.tar.bz2` will be created in this directory.
+    delete: bool, default=True
+        Whether to delete uncompressed files.
+    """
+    jetto_tar_file = os.path.join(directory, "jetto_results.tar.bz2")
+    if os.path.exists(jetto_tar_file):
+        raise OSError(f"{jetto_tar_file} already exists.")
+
+    # Compress output files into a tarball
+    with tarfile.open(jetto_tar_file, "w:bz2") as tar:
+        tar.add(directory, arcname="")
+
+    if delete:
+        # Delete uncompressed files
+        for f in os.listdir(directory):
+            if os.path.splitext(f)[1] not in [".CDF", ".log", ".bz2"]:
+                path = os.path.join(directory, f)
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
