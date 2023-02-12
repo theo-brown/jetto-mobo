@@ -30,27 +30,27 @@ def animation(
     output_dir: str,
     title: str,
     benchmark_path: str = "./data/benchmark",
-    cost_range=[3, 20],
+    objective_range=[0, 7],
 ):
     benchmark = get_benchmark_data(benchmark_path)
 
     with h5py.File(input_filename, "r") as hdf5_file:
 
         def get_traces(group: str):
-            min_cost = float(np.min(np.nan_to_num(hdf5_file[group]["cost"], nan=1e3)))
+            max_value = float(np.max(np.nan_to_num(hdf5_file[group]["value"], nan=0)))
             q_traces = []
             ecrh_traces = []
             for i in range(batch_size):
-                # Cost and colour
-                cost_i = float(hdf5_file[group]["cost"][i])
-                if np.isnan(cost_i):
+                # Value and colour
+                value_i = float(hdf5_file[group]["value"][i])
+                if np.isnan(value_i):
                     continue
                 colour = rgba_colormap(
-                    cost_i,
-                    cost_range[0],
-                    cost_range[1],
+                    value_i,
+                    objective_range[0],
+                    objective_range[1],
                     "viridis",
-                    alpha=1 if cost_i == min_cost else 0.3,
+                    alpha=1 if value_i == max_value else 0.3,
                 )
 
                 # Q profile
@@ -76,19 +76,19 @@ def animation(
                         showlegend=False,
                     )
                 )
-            return min_cost, q_traces, ecrh_traces
+            return max_value, q_traces, ecrh_traces
 
         n_completed_bayesopt_steps = hdf5_file["/"].attrs["n_completed_bayesopt_steps"]
         batch_size = hdf5_file["/"].attrs["batch_size"]
 
         step = np.arange(n_completed_bayesopt_steps + 1)
-        cost = np.empty(len(step))
+        value = np.empty(len(step))
 
         # Initialisation
-        cost[0], initial_q_traces, initial_ecrh_traces = get_traces("initialisation")
-        initial_cost_trace = go.Scatter(
+        value[0], initial_q_traces, initial_ecrh_traces = get_traces("initialisation")
+        initial_value_trace = go.Scatter(
             x=step,
-            y=np.ones(len(step)) * cost[0],
+            y=np.ones(len(step)) * value[0],
             mode="lines",
             line_color="black",
             line_dash="dot",
@@ -96,9 +96,9 @@ def animation(
         )
 
         # Benchmark
-        benchmark_cost_trace = go.Scatter(
+        benchmark_value_trace = go.Scatter(
             x=step,
-            y=np.ones(len(step)) * benchmark["scalar_cost"],
+            y=np.ones(len(step)) * benchmark["scalar_value"],
             name="SPR45-v9",
             legendgroup="SPR45-v9",
             mode="lines",
@@ -135,8 +135,8 @@ def animation(
             # Benchmark data
             figure.add_traces(
                 [
-                    initial_cost_trace,
-                    benchmark_cost_trace,
+                    initial_value_trace,
+                    benchmark_value_trace,
                     benchmark_ecrh_trace,
                     benchmark_q_trace,
                 ],
@@ -158,7 +158,7 @@ def animation(
                 )
             else:
                 # Bayesopt data
-                cost[bayesopt_step], q_traces, ecrh_traces = get_traces(
+                value[bayesopt_step], q_traces, ecrh_traces = get_traces(
                     f"bayesopt/{bayesopt_step}"
                 )
                 figure.add_traces(
@@ -170,11 +170,11 @@ def animation(
                     q_traces, rows=[2] * len(q_traces), cols=[2] * len(q_traces)
                 )
 
-            # Cost trace
+            # Objective trace
             figure.add_trace(
                 go.Scatter(
                     x=step[: bayesopt_step + 1],
-                    y=cost[: bayesopt_step + 1],
+                    y=value[: bayesopt_step + 1],
                     mode="lines+markers",
                     showlegend=False,
                     line_color=plotly.colors.qualitative.Bold[2],
@@ -193,9 +193,9 @@ def animation(
                     marker=dict(
                         colorscale="viridis",
                         showscale=True,
-                        cmin=cost_range[0],
-                        cmax=cost_range[1],
-                        colorbar_title="Cost",
+                        cmin=objective_range[0],
+                        cmax=objective_range[1],
+                        colorbar_title="Value",
                         colorbar_titleside="top",
                         colorbar_outlinewidth=0,
                         colorbar_tickwidth=1,
@@ -215,7 +215,7 @@ def animation(
                 col=1,
                 range=[0, n_completed_bayesopt_steps],
             )
-            figure.update_yaxes(title_text="Minimum cost", row=1, col=1)
+            figure.update_yaxes(title_text="Maximum objective value", row=1, col=1)
             figure.update_xaxes(
                 title_text="Normalised radius", row=2, col=1, range=[0, 1]
             )
