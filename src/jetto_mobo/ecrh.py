@@ -233,16 +233,16 @@ def create_config(
     config.export(config_directory)
 
 
-def get_batch_cost(
+def get_batch_value(
     ecrh_parameters: np.ndarray,
     batch_directory: str,
     ecrh_function: Callable[[np.ndarray, np.ndarray], np.ndarray],
-    cost_function: Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray],
+    value_function: Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray],
     timelimit: Optional[int] = None,
     jetto_template: str = "jetto/templates/spr45-v9",
     jetto_image: str = "jetto/images/sim.v220922.sif",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Compute the given cost function for each element in a batch array of ECRH parameters.
+    """Compute the given value function for each element in a batch array of ECRH parameters.
 
     This function uses `jetto_container.run_many` to asynchronously run a batch of JETTO runs, one for each element of the batch.
 
@@ -254,8 +254,8 @@ def get_batch_cost(
         Root directory to store JETTO files in. Output of each run will be stored in '{directory}/{i}', for i=1,...,n.
     ecrh_function : Callable[(Iterable[float], Iterable[float]), Iterable[float]]
         A function that takes normalised radius (XRHO) as first argument, `n` ECRH parameters as second argument, and returns ECRH power (QECE).
-    cost_function : Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray]
-        A function that takes JETTO `profiles` and `timetraces` datasets, and returns a cost associated with the ECRH profile. Output shape `(c,)`.
+    value_function : Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray]
+        A function that takes JETTO `profiles` and `timetraces` datasets, and returns a value associated with the ECRH profile. Output shape `(c,)`.
     timelimit : Optional[int], default None
         Time limit in seconds for JETTO runs. If None, no timelimit imposed.
     jetto_template : str, default "jetto/templates/spr45-v9"
@@ -293,7 +293,7 @@ def get_batch_cost(
     # Parse outputs
     converged_inputs = []
     converged_outputs = []
-    costs = []
+    values = []
     for i, (profiles, timetraces) in enumerate(batch_output):
         if profiles is not None:
             # Load data
@@ -303,14 +303,14 @@ def get_batch_cost(
             # Save to arrays
             converged_inputs.append(profiles["QECE"][-1])
             converged_outputs.append(profiles["Q"][-1])
-            costs.append(cost_function(profiles, timetraces))
+            values.append(value_function(profiles, timetraces))
         else:
             converged_inputs.append([None])
             converged_outputs.append([None])
-            costs.append([None])
+            values.append([None])
 
     return (
         utils.pad_1d(converged_inputs),
         utils.pad_1d(converged_outputs),
-        utils.pad_1d(costs),
+        utils.pad_1d(values),
     )
