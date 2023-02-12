@@ -45,7 +45,7 @@ async def run(
         name=f"jetto-mobo.container.{container_id}", level=logging.INFO
     )
 
-    with open(f"{config_directory}/singularity.log", 'a') as log_file:
+    with open(f"{config_directory}/singularity.log", "a") as log_file:
         # Start a container
         # logger.info(f"Creating container...")
         create_container = await asyncio.create_subprocess_exec(
@@ -59,8 +59,8 @@ async def run(
             f"{config_directory}:/jetto/runs/{run_name}",  # Bind the output directory to the container's jetto run directory
             jetto_image,
             container_id,
-                stdout=log_file,
-                stderr=asyncio.subprocess.STDOUT,
+            stdout=log_file,
+            stderr=asyncio.subprocess.STDOUT,
         )
         await create_container.wait()
 
@@ -80,8 +80,8 @@ async def run(
             run_name,
             "build",
             "docker",
-                stdout=log_file,
-                stderr=asyncio.subprocess.STDOUT,
+            stdout=log_file,
+            stderr=asyncio.subprocess.STDOUT,
         )
         try:
             await asyncio.wait_for(run_jetto.communicate(), timelimit)
