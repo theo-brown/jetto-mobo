@@ -106,10 +106,11 @@ async def run(
         + (f" (timed out after {timelimit}s)." if timeout else ".")
     )
 
-    # Convert to CDF
-    results = JettoResults(path=config_directory)
-    profiles = results.load_profiles()
-    timetraces = results.load_timetraces()
+    if run_jetto.returncode == 0 and not timeout:
+        # Create CDF files
+        results = JettoResults(path=config_directory)
+        profiles = results.load_profiles()
+        timetraces = results.load_timetraces()
 
     # Compress
     compress_jetto_dir(config_directory)
