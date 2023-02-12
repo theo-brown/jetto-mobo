@@ -78,17 +78,17 @@ parser.add_argument(
     help="Config JSON passed to ECRH function, used to set fixed (non-optimisable) ECRH parameters (default: '{}').",
 )
 parser.add_argument(
-    "--cost_function",
+    "--value_function",
     type=str,
-    choices=["scalar"],
+    choices=["scalar", "vector"],
     default="scalar",
-    help="Cost function to use (default: 'scalar').",
+    help="Value function to use (default: 'scalar').",
 )
 parser.add_argument(
-    "--jetto_fail_cost",
+    "--jetto_fail_value",
     type=float,
-    default=1e3,
-    help="Value of cost function if JETTO fails (default: 1e3).",
+    default=0.1,
+    help="Value of objective function if JETTO fails (default: 0.1).",
 )
 parser.add_argument(
     "--jetto_timelimit",
@@ -116,8 +116,8 @@ file_attrs = [
     "n_sobol_samples",
     "ecrh_function",
     "ecrh_function_config",
-    "cost_function",
-    "jetto_fail_cost",
+    "value_function",
+    "jetto_fail_value",
     "jetto_timelimit",
 ]
 
@@ -174,13 +174,12 @@ ecrh_parameter_bounds = torch.tensor(
     device=device,
 )
 
-# Set cost function
-if args.cost_function == "scalar":
-    cost_function = objective.scalar_cost_function
-    cost_dimension = 1
-# elif args.cost_function == "vector":
-# cost_function = objective.vector_cost_function
-# cost_dimension = 8
+# Set objective/value function
+if args.value_function == "scalar":
+    value_function = objective.scalar_objective
+    value_function_dimension = 1
+elif args.value_function == "vector":
+    raise NotImplementedError("Vector objective function not implemented yet")
 
 # Set up logging
 logger = utils.get_logger("jetto-mobo", level=logging.INFO)
@@ -209,12 +208,12 @@ if args.resume:
             device=device,
             dtype=dtype,
         )
-        cost = torch.tensor(
+        value = torch.tensor(
             np.concatenate(
                 (
-                    f["initialisation/cost"][:],
+                    f["initialisation/value"][:],
                     *[
-                        f[f"bayesopt/{i+1}/cost"][:]
+                        f[f"bayesopt/{i+1}/value"][:]
                         for i in range(n_completed_bayesopt_steps)
                     ],
                 )
@@ -228,14 +227,14 @@ else:
         ecrh_parameter_bounds, n=1, q=args.batch_size
     ).squeeze()
     ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
-    converged_ecrh, converged_q, cost = ecrh.get_batch_cost(
+    converged_ecrh, converged_q, value = ecrh.get_batch_value(
         ecrh_parameters=ecrh_parameters_numpy,
         batch_directory=f"{args.output_dir}/initialisation",
         ecrh_function=ecrh_function,
-        cost_function=cost_function,
+        value_function=value_function,
         timelimit=args.jetto_timelimit,
     )
-    if np.all(np.isnan(cost)):
+    if np.all(np.isnan(value)):
         raise RuntimeError(
             "Failed to generate initial values; all initial points failed to converge."
         )
@@ -244,8 +243,8 @@ else:
         f["initialisation/ecrh_parameters"] = ecrh_parameters_numpy
         f["initialisation/converged_ecrh"] = converged_ecrh
         f["initialisation/converged_q"] = converged_q
-        f["initialisation/cost"] = cost
-    cost = torch.tensor(cost, dtype=dtype, device=device)
+        f["initialisation/value"] = value
+    value = torch.tensor(value, dtype=dtype, device=device)
 
 ##############################
 # BAYESIAN OPTIMISATION LOOP #
@@ -256,20 +255,19 @@ for i in np.arange(
 ):
     logger.info(f"BayesOpt iteration {i}:")
 
-    # If a run failed, it will produce a NaN cost.
+    # If a run failed, it will produce a NaN value.
     # To enable us to perform gradient-based optimisation,
     # we either set drop these runs, or set the
-    # corresponding cost to a very large number.
-    if args.jetto_fail_cost is not None:
-        cost[cost.isnan()] = args.jetto_fail_cost
+    # corresponding value to a very small number
+    if args.jetto_fail_value is not None:
+        value[value.isnan()] = args.jetto_fail_value
     else:
-        cost = cost[~cost.isnan()]
-        ecrh_parameters = ecrh_parameters[~cost.isnan()]
+        value = value[~value.isnan()]
+        ecrh_parameters = ecrh_parameters[~value.isnan()]
 
     # Initialise surrogate model
-    # BoTorch performs maximisation, so need to use -cost
-    logger.info("Fitting surrogate model to observed costs...")
-    model = SingleTaskGP(ecrh_parameters, -cost)
+    logger.info("Fitting surrogate model to observed values...")
+    model = SingleTaskGP(ecrh_parameters, value)
     # Fit the model
     mll = ExactMarginalLogLikelihood(model.likelihood, model)
     fit_gpytorch_mll(mll)
@@ -319,30 +317,29 @@ for i in np.arange(
         },
     )
     new_ecrh_parameters_numpy = new_ecrh_parameters.detach().cpu().numpy()
-    with h5py.File(output_file, "a") as f:
-        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters_numpy
-        
+
     # TODO Get templates from previous points
 
-    # Observe cost values
-    logger.info("Calculating cost of candidate points...")
-    converged_ecrh, converged_q, new_cost = ecrh.get_batch_cost(
+    # Observe values
+    logger.info("Calculating value of candidate points...")
+    converged_ecrh, converged_q, new_value = ecrh.get_batch_value(
         ecrh_parameters=new_ecrh_parameters_numpy,
         batch_directory=f"{args.output_dir}/bayesopt/{i}",
         ecrh_function=ecrh_function,
-        cost_function=cost_function,
+        value_function=value_function,
         timelimit=args.jetto_timelimit,
     )
 
     # Update logged data
-    # TODO tidy resume if computing cost failed
+    # TODO tidy resume if computing value failed
     n_completed_bayesopt_steps += 1
     with h5py.File(output_file, "a") as f:
+        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters_numpy
         f[f"bayesopt/{i}/converged_ecrh"] = converged_ecrh
         f[f"bayesopt/{i}/converged_q"] = converged_q
-        f[f"bayesopt/{i}/cost"] = new_cost
+        f[f"bayesopt/{i}/value"] = new_value
         f["/"].attrs["n_completed_bayesopt_steps"] = n_completed_bayesopt_steps
 
     # Update tensors for next BayesOpt
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
-    cost = torch.cat([cost, torch.tensor(new_cost, dtype=dtype, device=device)])
+    value = torch.cat([value, torch.tensor(new_value, dtype=dtype, device=device)])
