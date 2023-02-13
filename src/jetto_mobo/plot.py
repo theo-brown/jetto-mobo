@@ -49,7 +49,7 @@ def animation(
                     value_i,
                     objective_range[0],
                     objective_range[1],
-                    "viridis",
+                    "viridis_r",
                     alpha=1 if value_i == max_value else 0.3,
                 )
 
@@ -191,7 +191,7 @@ def animation(
                     mode="markers",
                     showlegend=False,
                     marker=dict(
-                        colorscale="viridis",
+                        colorscale="viridis_r",
                         showscale=True,
                         cmin=objective_range[0],
                         cmax=objective_range[1],
