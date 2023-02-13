@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from jetto_tools.results import JettoResults
 from plotly.subplots import make_subplots
 
-from jetto_mobo.objective import scalar_cost_function, vector_cost_function
+from jetto_mobo.objective import scalar_objective, vector_objective
 from jetto_mobo.utils import rgba_colormap
 
 
@@ -17,8 +17,8 @@ def get_benchmark_data(path: str):
     profiles = benchmark.load_profiles()
     timetraces = benchmark.load_timetraces()
     return {
-        "scalar_cost": scalar_cost_function(profiles, timetraces),
-        "vector_cost": vector_cost_function(profiles, timetraces),
+        "scalar_value": scalar_objective(profiles, timetraces),
+        "vector_value": vector_objective(profiles, timetraces),
         "ecrh": profiles["QECE"][-1],
         "q": profiles["Q"][-1],
         "xrho": profiles["XRHO"][-1],
