@@ -83,14 +83,14 @@ parser.add_argument(
 parser.add_argument(
     "--jetto_fail_value",
     type=float,
-    default=50,
-    help="Value of objective function if JETTO fails (default: 50).",
+    default=-50,
+    help="Value of objective function if JETTO fails (default: -50).",
 )
 parser.add_argument(
     "--jetto_timelimit",
     type=float,
-    default=-1,
-    help="Maximum number of seconds to wait for JETTO to complete; if < 0, run until complete (default: -1).",
+    default=10400,
+    help="Maximum number of seconds to wait for JETTO to complete; if < 0, run until complete (default: 10400).",
 )
 parser.add_argument(
     "--resume",
