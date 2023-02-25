@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from netCDF4 import Dataset
 
@@ -20,6 +22,7 @@ def proximity_of_argmin_q_to_axis(profiles: Dataset, timetraces: Dataset):
 
 
 def q_increasing(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where q is increasing, weighted by area"""
     q = profiles["Q"][-1].data
     dq = np.gradient(q)
     increasing_q_area = np.sum(q[dq > 0])
@@ -28,6 +31,7 @@ def q_increasing(profiles: Dataset, timetraces: Dataset):
 
 
 def dq_increasing(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where dq is increasing, weighted by area"""
     dq = np.gradient(profiles["Q"][-1].data)
     ddq = np.gradient(dq)
     increasing_dq_area = np.sum(dq[ddq > 0])
@@ -44,20 +48,19 @@ def rho_of_q_value(profiles: Dataset, timetraces: Dataset, value: float):
     return xrho[i]
 
 
-# def gradient_of_q_at_value(profiles: Dataset, timetraces: Dataset, value=3):
-#     """dq at first point where q>=value and r >= argmin(q)"""
-#     q = profiles["Q"][-1].data
-#     dq = np.gradient(q)
-#     condition_1 = q >= value
-#     condition_2 = np.arange(len(q)) >= np.argmin(q)
-#     # Get index of element where both conditions are met
-#     i = np.where(condition_1 & condition_2)[0][0]
-#     return dq[i]
+def gradient_of_q_at_value(profiles: Dataset, timetraces: Dataset, value=3):
+    """1 - exp(-dq) at first point where q>=value and r >= argmin(q)"""
+    q = profiles["Q"][-1].data
+    dq = np.gradient(q)
+    condition_1 = q >= value
+    condition_2 = np.arange(len(q)) >= np.argmin(q)
+    # Get index of element where both conditions are met
+    i = np.where(condition_1 & condition_2)[0][0]
 
-
-# def proximity_of_internal_inductance_to_target(profiles: Dataset, timetraces: Dataset, target=0.25):
-#     """exp(-|| li - target ||)"""
-#     return np.exp(-np.abs(timetraces["LI"][-1].data - target)))
+    if dq[i] < 0:
+        return 0
+    else:
+        return 1 - np.exp(-dq[i])
 
 
 def vector_objective(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
@@ -82,11 +85,16 @@ def vector_objective(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
             proximity_of_argmin_q_to_axis(profiles, timetraces),
             q_increasing(profiles, timetraces),
             dq_increasing(profiles, timetraces),
-            rho_of_q_value(profiles, timetraces, value=3),
-            rho_of_q_value(profiles, timetraces, value=4),
+            gradient_of_q_at_value(profiles, timetraces, value=3),
+            gradient_of_q_at_value(profiles, timetraces, value=4),
         ]
     )
 
 
-def scalar_objective(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
-    return np.sum(vector_objective(profiles, timetraces))
+def scalar_objective(
+    profiles: Dataset, timetraces: Dataset, weights: Optional[np.ndarray] = None
+) -> np.ndarray:
+    v = vector_objective(profiles, timetraces)
+    if weights is None:
+        return np.sum(v)
+    return weights @ v
