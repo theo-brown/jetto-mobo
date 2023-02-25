@@ -15,7 +15,7 @@ from botorch.sampling.normal import SobolQMCNormalSampler
 from botorch.utils.sampling import draw_sobol_samples
 from gpytorch.mlls import ExactMarginalLogLikelihood
 
-from jetto_mobo import ecrh, objective, utils
+from jetto_mobo import ecrh, genetic_algorithm, objective, utils
 
 #################
 # PROGRAM SETUP #
@@ -62,11 +62,7 @@ parser.add_argument(
     type=str,
     choices=[
         "piecewise_linear",
-        "piecewise_linear_2",
-        "piecewise_linear_3",
         "sum_of_gaussians",
-        "sum_of_gaussians_2",
-        "sigmoid_spline",
     ],
     default="piecewise_linear",
     help="ECRH function to use (default: 'piecewise_linear').",
@@ -87,8 +83,8 @@ parser.add_argument(
 parser.add_argument(
     "--jetto_fail_value",
     type=float,
-    default=0.1,
-    help="Value of objective function if JETTO fails (default: 0.1).",
+    default=50,
+    help="Value of objective function if JETTO fails (default: 50).",
 )
 parser.add_argument(
     "--jetto_timelimit",
@@ -142,32 +138,12 @@ ecrh_function_config = json.loads(args.ecrh_function_config)
 if args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
-elif args.ecrh_function == "piecewise_linear_2":
-    n_ecrh_parameters = 12
-    ecrh_function = ecrh.piecewise_linear_2
-elif args.ecrh_function == "piecewise_linear_3":
-    n_ecrh_parameters = 12
-    ecrh_function = ecrh.piecewise_linear_3
-elif args.ecrh_function == "sigmoid_spline":
-    n_ecrh_parameters = 12
-    ecrh_function = ecrh.sigmoid_cubic_spline
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = ecrh_function_config.get("n", 5)
+    n_ecrh_parameters = 2 * n_gaussians
     variance = ecrh_function_config.get("variance", 0.0025)
-    n_ecrh_parameters = n_gaussians * 2
+    ecrh_function = lambda x, p: ecrh.sum_of_gaussians(x, p, variance)
 
-    def ecrh_function(x, params):
-        return ecrh.sum_of_gaussians(
-            x,
-            params[:n_gaussians],  # means
-            [variance] * n_gaussians,  # variances
-            params[n_gaussians:],  # amplitudes
-        )
-
-elif args.ecrh_function == "sum_of_gaussians_2":
-    n_ecrh_parameters = 10
-    variance = ecrh_function_config.get("variance", 0.0025)
-    ecrh_function = lambda x, p: ecrh.sum_of_gaussians_2(x, p, variance)
 ecrh_parameter_bounds = torch.tensor(
     [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
     dtype=dtype,
@@ -176,7 +152,11 @@ ecrh_parameter_bounds = torch.tensor(
 
 # Set objective/value function
 if args.value_function == "scalar":
-    value_function = objective.scalar_objective
+    value_function = (
+        lambda profiles, timetraces: -genetic_algorithm.scalar_cost_function(
+            profiles, timetraces
+        )
+    )
     value_function_dimension = 1
 elif args.value_function == "vector":
     raise NotImplementedError("Vector objective function not implemented yet")
