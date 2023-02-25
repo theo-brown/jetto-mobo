@@ -18,23 +18,6 @@ def _gaussian(
 
 
 def sum_of_gaussians(
-    x: Iterable[float],
-    means: Iterable[float],
-    variances: Iterable[float],
-    amplitudes: Iterable[float],
-) -> np.ndarray:
-    if len(means) != len(variances) or len(means) != len(amplitudes):
-        raise ValueError(
-            "means, variances, amplitudes should be same length;"
-            f"got lengths [{len(means)}, {len(variances)}, {len(amplitudes)}]"
-        )
-
-    return np.sum(
-        [_gaussian(x, m, v, a) for m, v, a in zip(means, variances, amplitudes)], axis=0
-    )
-
-
-def sum_of_gaussians_2(
     x: Iterable[float], parameters: Iterable[float], variance: float = 0.0025
 ) -> np.ndarray:
     if len(parameters) % 2 != 0:
@@ -42,118 +25,15 @@ def sum_of_gaussians_2(
 
     n_gaussians = len(parameters) // 2
 
-    relative_means = parameters[:n_gaussians]
+    means = np.cumprod(parameters[:n_gaussians])
     amplitudes = parameters[n_gaussians:]
 
-    true_means = np.empty(n_gaussians)
-    for i in range(n_gaussians):
-        true_means[-i] = np.prod(relative_means[-i:])
-
     return np.sum(
-        [_gaussian(x, m, variance, a) for m, a in zip(true_means, amplitudes)], axis=0
+        [_gaussian(x, m, variance, a) for m, a in zip(means, amplitudes)], axis=0
     )
 
 
 def piecewise_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
-    if len(parameters) != 12:
-        raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
-
-    # On axis peak
-    on_axis_peak_x = 0
-    on_axis_peak_y = parameters[0]
-
-    # On axis peak shaper
-    on_axis_peak_end_x = parameters[1]
-    on_axis_peak_end_y = parameters[2] * on_axis_peak_y
-
-    # Minimum
-    minimum_x = parameters[3]
-    minimum_y = parameters[4]
-
-    # Minimum shaper
-    minimum_shaper_x = (minimum_x + on_axis_peak_end_x) / 2
-    minimum_shaper_y = parameters[5] * minimum_y
-
-    # Off-axis peak
-    off_axis_peak_x = (minimum_x + parameters[6]) / 2
-    off_axis_peak_y = parameters[7]
-
-    # Off-axis shaper 2
-    off_axis_shaper_2_x = (minimum_x + 2 * off_axis_peak_x) / 3
-    off_axis_shaper_2_y = (
-        parameters[8] * off_axis_peak_y + (1 - parameters[8]) * minimum_y
-    )
-
-    # Off-axis shaper 1
-    off_axis_shaper_1_x = (2 * minimum_x + off_axis_peak_x) / 3
-    off_axis_shaper_1_y = (
-        parameters[9] * off_axis_shaper_2_y + (1 - parameters[9]) * minimum_y
-    )
-
-    # Turn-off
-    turn_off_x = off_axis_peak_x + parameters[11]
-    turn_off_y = 0
-
-    # Turn-off shaper
-    turn_off_shaper_x = (off_axis_peak_x + turn_off_x) / 2
-    turn_off_shaper_y = parameters[10] * off_axis_peak_y
-
-    # Collect into array
-    node_xs = [
-        on_axis_peak_x,
-        on_axis_peak_end_x,
-        minimum_shaper_x,
-        minimum_x,
-        off_axis_shaper_1_x,
-        off_axis_shaper_2_x,
-        off_axis_peak_x,
-        turn_off_shaper_x,
-        turn_off_x,
-    ]
-    node_ys = [
-        on_axis_peak_y,
-        on_axis_peak_end_y,
-        minimum_shaper_y,
-        minimum_y,
-        off_axis_shaper_1_y,
-        off_axis_shaper_2_y,
-        off_axis_peak_y,
-        turn_off_shaper_y,
-        turn_off_y,
-    ]
-
-    return np.interp(x, node_xs, node_ys)
-
-
-def piecewise_linear_2(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
-    """Piecewise linear with 7 nodes, specifying (x,y) of each node.
-
-    Parameters
-    ----------
-    x : Iterable[float]
-        Input array; currently needs to be [0, 1].
-    parameters : Iterable[float]
-        12 parameters, each [0, 1].
-
-    Returns
-    -------
-    np.ndarray
-        6-segment piecewise linear function
-
-    Raises
-    ------
-    ValueError
-        If `len(parameters) != 12`.
-    """
-    if len(parameters) != 12:
-        raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
-    padded_parameters = np.pad(parameters, 1, "constant", constant_values=0)
-    node_xs = padded_parameters[:7]
-    node_ys = padded_parameters[7:]
-    return np.interp(x, node_xs, node_ys)
-
-
-def piecewise_linear_3(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
     """Piecewise linear, with points evenly spaced in `[0, parameters[0]]`, with ys specified by `[*parameters[1:], 0]`.
 
     Parameters
@@ -161,7 +41,7 @@ def piecewise_linear_3(x: Iterable[float], parameters: Iterable[float]) -> np.nd
     x : Iterable[float]
         Input array; currently needs to be [0, 1].
     parameters : Iterable[float]
-        12 parameters, each [0, 1].
+        Parameters, each [0, 1].
 
     Returns
     -------
@@ -179,6 +59,39 @@ def piecewise_linear_3(x: Iterable[float], parameters: Iterable[float]) -> np.nd
     end_node_x = parameters[0]
     node_ys = np.concatenate([parameters[1:], [0]])
     node_xs = np.linspace(0, end_node_x, len(parameters))
+    return np.interp(x, node_xs, node_ys)
+
+
+def piecewise_linear_decreasing(
+    x: Iterable[float], parameters: Iterable[float]
+) -> np.ndarray:
+    """Decreasing piecewise linear function, with points evenly spaced in `[0, parameters[0]]`, with ys specified by `[*parameters[1:], 0]`.
+
+    Parameters
+    ----------
+    x : Iterable[float]
+        Input array; currently needs to be [0, 1].
+    parameters : Iterable[float]
+        parameters, each [0, 1].
+
+    Returns
+    -------
+    np.ndarray
+        Piecewise linear function evaluated on x.
+
+    Raises
+    ------
+    ValueError
+        If `len(parameters) < 2`.
+    """
+    if len(parameters) < 2:
+        raise ValueError(f"Expected at least 2 parameters, got {len(parameters)}.")
+
+    end_node_x = parameters[0]
+    node_xs = np.linspace(0, end_node_x, len(parameters))
+
+    node_ys = np.cumprod([*parameters[1:], 0])
+
     return np.interp(x, node_xs, node_ys)
 
 
