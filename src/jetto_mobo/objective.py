@@ -10,10 +10,19 @@ def proximity_of_q0_to_qmin(profiles: Dataset, timetraces: Dataset):
     return np.exp(-distance)
 
 
-def proximity_of_qmin_to_target(profiles: Dataset, timetraces: Dataset, target=2.2):
+def proximity_of_qmin_to_target(
+    profiles: Dataset,
+    timetraces: Dataset,
+    target: float = 2.2,
+    minimum: float = 2,
+):
     """exp(-|| min(q) - target ||)"""
-    distance = np.abs(timetraces["QMIN"][-1].data - target)
-    return np.exp(-distance)
+    qmin = timetraces["QMIN"][-1].data
+    if qmin < minimum:
+        return 0
+    else:
+        distance = np.abs(qmin - target)
+        return np.exp(-distance)
 
 
 def proximity_of_argmin_q_to_axis(profiles: Dataset, timetraces: Dataset):
@@ -48,6 +57,7 @@ def rho_of_q_value(profiles: Dataset, timetraces: Dataset, value: float):
     return xrho[i]
 
 
+# The issue with this as an objective is that you can end up rewarding bumpy q profiles (eg PL50-9.19)
 def gradient_of_q_at_value(profiles: Dataset, timetraces: Dataset, value=3):
     """1 - exp(-dq) at first point where q>=value and r >= argmin(q)"""
     q = profiles["Q"][-1].data
@@ -63,7 +73,10 @@ def gradient_of_q_at_value(profiles: Dataset, timetraces: Dataset, value=3):
         return 1 - np.exp(-dq[i])
 
 
-def vector_objective(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
+def vector_objective(
+    profiles: Dataset,
+    timetraces: Dataset,
+) -> np.ndarray:
     """Vector objective function for safety factor profile.
 
     Parameters
@@ -85,8 +98,8 @@ def vector_objective(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
             proximity_of_argmin_q_to_axis(profiles, timetraces),
             q_increasing(profiles, timetraces),
             dq_increasing(profiles, timetraces),
-            gradient_of_q_at_value(profiles, timetraces, value=3),
-            gradient_of_q_at_value(profiles, timetraces, value=4),
+            rho_of_q_value(profiles, timetraces, value=3),
+            rho_of_q_value(profiles, timetraces, value=4),
         ]
     )
 
@@ -96,5 +109,6 @@ def scalar_objective(
 ) -> np.ndarray:
     v = vector_objective(profiles, timetraces)
     if weights is None:
-        return np.sum(v)
-    return weights @ v
+        return np.mean(v)
+    else:
+        return np.mean(weights * v)
