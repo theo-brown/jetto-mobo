@@ -77,9 +77,9 @@ parser.add_argument(
 parser.add_argument(
     "--value_function",
     type=str,
-    choices=["scalar", "vector"],
-    default="scalar",
-    help="Value function to use (default: 'scalar').",
+    choices=["ga_scalar", "scalar", "vector"],
+    default="ga_scalar",
+    help="Value function to use (default: 'ga_scalar').",
 )
 parser.add_argument(
     "--jetto_fail_value",
@@ -155,13 +155,16 @@ ecrh_parameter_bounds = torch.tensor(
 )
 
 # Set objective/value function
-if args.value_function == "scalar":
+if args.value_function == "ga_scalar":
+    # GA objective is a minimisation problem, so we need to flip the sign
     value_function = (
         lambda profiles, timetraces: -genetic_algorithm.scalar_cost_function(
             profiles, timetraces
         )
     )
     value_function_dimension = 1
+elif args.value_function == "scalar":
+    value_function = objective.scalar_objective
 elif args.value_function == "vector":
     raise NotImplementedError("Vector objective function not implemented yet")
 
