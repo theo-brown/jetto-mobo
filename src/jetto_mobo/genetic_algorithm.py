@@ -70,8 +70,8 @@ def q0_qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
     return timetraces["Q0"][-1].data - timetraces["QMIN"][-1].data
 
 
-def qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
-    return timetraces["QMIN"][-1].data
+def qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset, target: float = 2.2):
+    return np.abs(timetraces["QMIN"][-1].data - target)
 
 
 def rho_qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
