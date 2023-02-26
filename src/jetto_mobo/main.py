@@ -9,6 +9,9 @@ import numpy as np
 import torch
 from botorch import fit_gpytorch_mll
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
+from botorch.acquisition.multi_objective.monte_carlo import (
+    qNoisyExpectedHypervolumeImprovement,
+)
 from botorch.models import SingleTaskGP
 from botorch.optim import optimize_acqf
 from botorch.sampling.normal import SobolQMCNormalSampler
@@ -88,6 +91,13 @@ parser.add_argument(
     help="Value of objective function if JETTO fails (default: -20).",
 )
 parser.add_argument(
+    "--reference_values",
+    type=float,
+    nargs="?",
+    default=None,
+    help="Reference value of objective function for each vector element.",
+)
+parser.add_argument(
     "--jetto_timelimit",
     type=float,
     default=10400,
@@ -165,8 +175,18 @@ if args.value_function == "ga_scalar":
     value_function_dimension = 1
 elif args.value_function == "scalar":
     value_function = objective.scalar_objective
+    value_function_dimension = 1
 elif args.value_function == "vector":
-    raise NotImplementedError("Vector objective function not implemented yet")
+    value_function = objective.vector_objective
+    value_function_dimension = 7
+    if args.reference_values is None:
+        reference_values = np.zeros(value_function_dimension)
+    elif len(args.reference_values) != value_function_dimension:
+        raise ValueError(
+            f"Received {len(args.reference_values)} values for --reference_values, expected {value_function_dimension}."
+        )
+    else:
+        reference_values = args.reference_values
 
 # Set up logging
 logger = utils.get_logger("jetto-mobo", level=logging.INFO)
@@ -244,13 +264,9 @@ for i in np.arange(
 
     # If a run failed, it will produce a NaN value.
     # To enable us to perform gradient-based optimisation,
-    # we either set drop these runs, or set the
-    # corresponding value to a very small number
-    if args.jetto_fail_value is not None:
-        value[value.isnan()] = args.jetto_fail_value
-    else:
-        value = value[~value.isnan()]
-        ecrh_parameters = ecrh_parameters[~value.isnan()]
+    # we set the corresponding value to a very small number
+    # Note, we could instead drop these runs completely
+    value[value.isnan()] = args.jetto_fail_value
 
     # Initialise surrogate model
     logger.info("Fitting surrogate model to observed values...")
@@ -265,11 +281,24 @@ for i in np.arange(
     # (low-discrepancy = on average, samples are evenly distributed to cover the space)
     # BoTorch recommends using Sobol because it produces lower variance gradient estimates
     # with much fewer samples [https://botorch.org/docs/samplers]
-    acquisition_function = qNoisyExpectedImprovement(
-        model=model,
-        X_baseline=ecrh_parameters,
-        sampler=SobolQMCNormalSampler(sample_shape=torch.Size([args.n_sobol_samples])),
-    )
+    if args.value_function == "vector":
+        acquisition_function = qNoisyExpectedHypervolumeImprovement(
+            model=model,
+            ref_point=reference_values,
+            X_baseline=ecrh_parameters,
+            prune_baseline=True,
+            sampler=SobolQMCNormalSampler(
+                sample_shape=torch.Size([args.n_sobol_samples])
+            ),
+        )
+    else:
+        acquisition_function = qNoisyExpectedImprovement(
+            model=model,
+            X_baseline=ecrh_parameters,
+            sampler=SobolQMCNormalSampler(
+                sample_shape=torch.Size([args.n_sobol_samples])
+            ),
+        )
 
     # Select next ECRH parameters
     # Use multistart optimisation:
