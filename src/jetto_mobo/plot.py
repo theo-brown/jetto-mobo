@@ -8,21 +8,8 @@ import plotly.graph_objects as go
 from jetto_tools.results import JettoResults
 from plotly.subplots import make_subplots
 
-from jetto_mobo.objective import scalar_objective, vector_objective
+from jetto_mobo.genetic_algorithm import scalar_cost_function
 from jetto_mobo.utils import rgba_colormap
-
-
-def get_benchmark_data(path: str):
-    benchmark = JettoResults(path=path)
-    profiles = benchmark.load_profiles()
-    timetraces = benchmark.load_timetraces()
-    return {
-        "scalar_value": scalar_objective(profiles, timetraces),
-        "vector_value": vector_objective(profiles, timetraces),
-        "ecrh": profiles["QECE"][-1],
-        "q": profiles["Q"][-1],
-        "xrho": profiles["XRHO"][-1],
-    }
 
 
 def animation(
@@ -30,9 +17,15 @@ def animation(
     output_dir: str,
     title: str,
     benchmark_path: str = "./data/benchmark",
-    objective_range=[0, 7],
+    objective_range=[-20, 0],
 ):
-    benchmark = get_benchmark_data(benchmark_path)
+    benchmark = JettoResults(path=path)
+    profiles = benchmark.load_profiles()
+    timetraces = benchmark.load_timetraces()
+    benchmark_value = scalar_cost_function(profiles, timetraces)
+    benchmark_ecrh = profiles["QECE"][-1]
+    benchmark_q = profiles["Q"][-1]
+    benchmark_xrho = profiles["XRHO"][-1]
 
     with h5py.File(input_filename, "r") as hdf5_file:
 
@@ -98,7 +91,7 @@ def animation(
         # Benchmark
         benchmark_value_trace = go.Scatter(
             x=step,
-            y=np.ones(len(step)) * benchmark["scalar_value"],
+            y=np.ones(len(step)) * benchmark_value,
             name="SPR45-v9",
             legendgroup="SPR45-v9",
             mode="lines",
@@ -106,8 +99,8 @@ def animation(
             line_color="black",
         )
         benchmark_ecrh_trace = go.Scatter(
-            x=benchmark["xrho"],
-            y=benchmark["ecrh"],
+            x=benchmark_xrho,
+            y=benchmark_ecrh,
             name="SPR45-v9",
             legendgroup="SPR45-v9",
             mode="lines",
@@ -116,8 +109,8 @@ def animation(
             line_color="black",
         )
         benchmark_q_trace = go.Scatter(
-            x=benchmark["xrho"],
-            y=benchmark["q"],
+            x=benchmark_xrho,
+            y=benchmark_q,
             name="SPR45-v9",
             legendgroup="SPR45-v9",
             mode="lines",
