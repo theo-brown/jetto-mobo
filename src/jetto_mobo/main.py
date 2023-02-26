@@ -61,11 +61,12 @@ parser.add_argument(
     "--ecrh_function",
     type=str,
     choices=[
+        "ga_piecewise_linear",
         "piecewise_linear",
         "sum_of_gaussians",
     ],
     default="piecewise_linear",
-    help="ECRH function to use (default: 'piecewise_linear').",
+    help="ECRH function to use (default: 'ga_piecewise_linear').",
 )
 parser.add_argument(
     "--ecrh_function_config",
@@ -83,8 +84,8 @@ parser.add_argument(
 parser.add_argument(
     "--jetto_fail_value",
     type=float,
-    default=-50,
-    help="Value of objective function if JETTO fails (default: -50).",
+    default=-20,
+    help="Value of objective function if JETTO fails (default: -20).",
 )
 parser.add_argument(
     "--jetto_timelimit",
@@ -135,7 +136,10 @@ else:
 
 # Set ECRH function
 ecrh_function_config = json.loads(args.ecrh_function_config)
-if args.ecrh_function == "piecewise_linear":
+if args.ecrh_function == "ga_piecewise_linear":
+    n_ecrh_parameters = 12
+    ecrh_function = genetic_algorithm.piecewise_linear
+elif args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
 elif args.ecrh_function == "sum_of_gaussians":
