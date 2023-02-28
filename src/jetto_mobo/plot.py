@@ -19,7 +19,7 @@ def animation(
     benchmark_path: str = "./data/benchmark",
     objective_range=[-20, 0],
 ):
-    benchmark = JettoResults(path=path)
+    benchmark = JettoResults(path=benchmark_path)
     profiles = benchmark.load_profiles()
     timetraces = benchmark.load_timetraces()
     benchmark_value = scalar_cost_function(profiles, timetraces)
