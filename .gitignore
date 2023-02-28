@@ -17,3 +17,4 @@ jetto/images/*
 data/*/bayesopt/*
 data/*/initialisation/*
 data/benchmark/*
+data/genetic_algorithm/*
