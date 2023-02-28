@@ -1,7 +1,8 @@
-from typing import Iterable
+from typing import Iterable, Optional, Tuple
 
 import netCDF4
 import numpy as np
+from scipy.interpolate import CubicSpline
 
 
 def rho_of_q_value(
@@ -13,7 +14,6 @@ def rho_of_q_value(
     returned. If qmax < value, 1 is returned.
     """
     qmin = timetraces["QMIN"][-1].data
-    roqm = timetraces["ROQM"][-1].data
     q = profiles["Q"][-1].data
     xrho = profiles["XRHO"][-1].data
     # Check if qmin gets down below flux_surface.
@@ -35,8 +35,6 @@ def monotonic_fraction_q(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset)
     Returns the fraction of the range of rho between roqm and 0.9 for which q is
     monotonically increasing.
     """
-    # Read in useful values.
-    roqm = timetraces["ROQM"][-1].data
     # Read in useful values.
     q = profiles["Q"][-1].data
     xrho = profiles["XRHO"][-1].data
@@ -70,105 +68,180 @@ def q0_qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
     return timetraces["Q0"][-1].data - timetraces["QMIN"][-1].data
 
 
-def qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset, target: float = 2.2):
-    return np.abs(timetraces["QMIN"][-1].data - target)
+def qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
+    return timetraces["QMIN"][-1].data
 
 
 def rho_qmin(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
     return timetraces["ROQM"][-1].data
 
 
-def scalar_cost_function(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
+def scale_to_target(
+    value: float,
+    possible_range: Tuple[Optional[float], Optional[float]],
+    target_range: Tuple[Optional[float], Optional[float]],
+):
+    # Check if there were any errors in evaluating the function.
+    if value is None:
+        # There was. Pass the issue forwards.
+        return None
+    # Error checking.
+    # If the value is outside what is thought to be the possible range, return 0
+    if (possible_range[0] is not None and value < possible_range[0]) or (
+        possible_range[1] is not None and value > possible_range[1]
+    ):
+        return 0
+    # Initialise the storage for the relavent boundaries of where the fitness
+    # should equal 1, and where it should equal 0.
+    zero_at = None
+    one_at = None
+    # Figure out what should be stored in these values.
+    if target_range[0] is not None and value < target_range[0]:
+        # We are below the target range, use the low end values.
+        zero_at = possible_range[0]
+        one_at = target_range[0]
+    elif target_range[1] is not None and value > target_range[1]:
+        # We are above the target range, use the high end values.
+        zero_at = possible_range[1]
+        one_at = target_range[1]
+    else:
+        # We must be inside the target range.
+        return 1.0
+    # Note that one_at must now set as we are outside of the range it defines.
+    # zero_at may still be none.
+    if zero_at is None:
+        # If unbound, return an exponential decrease.
+        return np.exp(-abs(value - one_at))
+    else:
+        # If bound, return a linear decrease.
+        return abs((value - zero_at) / (one_at - zero_at))
+
+
+def scalar_objective(
+    profiles: netCDF4.Dataset,
+    timetraces: netCDF4.Dataset,
+    weights: Optional[Iterable[float]] = [0.5, 5, 6, 1, 2, 10, 10],
+):
+    v = vector_objective(profiles, timetraces)
+    if weights is not None:
+        w = np.asarray(weights)
+        normalised_weights = w / w.sum()
+        return normalised_weights @ v
+    else:
+        return v.sum()
+
+
+def vector_objective(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
     return (
-        0.5 * q0_qmin(profiles, timetraces)
-        + 5 * qmin(profiles, timetraces)
-        + 6 * rho_qmin(profiles, timetraces)
-        + 1
-        - rho_of_q_value(profiles, timetraces, 3)
-        + 2 * (1 - rho_of_q_value(profiles, timetraces, 4))
-        + 10 * (1 - monotonic_fraction_q(profiles, timetraces))
-        + 10 * (1 - monotonic_fraction_q1(profiles, timetraces))
+        scale_to_target(
+            q0_qmin(profiles, timetraces),
+            possible_range=(0.0, None),
+            target_range=(0.0, 2.0),
+        ),
+        scale_to_target(
+            qmin(profiles, timetraces),
+            possible_range=(0.0, None),
+            target_range=(2.25, 2.35),
+        ),
+        scale_to_target(
+            rho_qmin(profiles, timetraces),
+            possible_range=(0.0, 1.0),
+            target_range=(0.0, 0.0),
+        ),
+        scale_to_target(
+            rho_of_q_value(profiles, timetraces, 3),
+            possible_range=(0.0, 1.0),
+            target_range=(1.0, 1.0),
+        ),
+        scale_to_target(
+            rho_of_q_value(profiles, timetraces, 4),
+            possible_range=(0.0, 1.0),
+            target_range=(1.0, 1.0),
+        ),
+        scale_to_target(
+            monotonic_fraction_q(profiles, timetraces),
+            possible_range=(0.0, 1.0),
+            target_range=(1.0, 1.0),
+        ),
+        scale_to_target(
+            monotonic_fraction_q1(profiles, timetraces),
+            possible_range=(0.0, 1.0),
+            target_range=(1.0, 1.0),
+        ),
     )
 
 
-def vector_cost_function(profiles: netCDF4.Dataset, timetraces: netCDF4.Dataset):
-    return (
-        0.5 * q0_qmin(profiles, timetraces),
-        5 * qmin(profiles, timetraces),
-        6 * rho_qmin(profiles, timetraces),
-        10 * (1 - monotonic_fraction_q(profiles, timetraces)),
-        10 * (1 - monotonic_fraction_q1(profiles, timetraces)),
-        1 - rho_of_q_value(profiles, timetraces, 3),
-        2 * (1 - rho_of_q_value(profiles, timetraces, 4)),
-    )
-
-
-def piecewise_linear(x: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
+def piecewise_linear(xrho: Iterable[float], parameters: Iterable[float]) -> np.ndarray:
     if len(parameters) != 12:
         raise ValueError(f"Expected 12 parameters, got {len(parameters)}.")
 
-    # On axis peak
-    on_axis_peak_x = 0
-    on_axis_peak_y = parameters[0]
-
-    # On axis peak shaper
-    on_axis_peak_end_x = parameters[1]
-    on_axis_peak_end_y = parameters[2] * on_axis_peak_y
-
-    # Minimum
-    minimum_x = parameters[3]
-    minimum_y = parameters[4]
-
-    # Minimum shaper
-    minimum_shaper_x = (minimum_x + on_axis_peak_end_x) / 2
-    minimum_shaper_y = parameters[5] * minimum_y
-
-    # Off-axis peak
-    off_axis_peak_x = (minimum_x + parameters[6]) / 2
-    off_axis_peak_y = parameters[7]
-
-    # Off-axis shaper 2
-    off_axis_shaper_2_x = (minimum_x + 2 * off_axis_peak_x) / 3
-    off_axis_shaper_2_y = (
-        parameters[8] * off_axis_peak_y + (1 - parameters[8]) * minimum_y
+    on_axis_peak_power = parameters[0]
+    on_axis_descent_end_power = parameters[1] * on_axis_peak_power
+    minimum_power = parameters[4]
+    minimum_shaper_power = (
+        parameters[3] * minimum_power + (1 - parameters[3]) * on_axis_descent_end_power
     )
-
-    # Off-axis shaper 1
-    off_axis_shaper_1_x = (2 * minimum_x + off_axis_peak_x) / 3
-    off_axis_shaper_1_y = (
-        parameters[9] * off_axis_shaper_2_y + (1 - parameters[9]) * minimum_y
+    off_axis_peak_power = parameters[8]
+    off_axis_shaper_2_power = (
+        parameters[7] * off_axis_peak_power + (1 - parameters[7]) * minimum_power
     )
+    off_axis_shaper_1_power = (
+        parameters[6] * off_axis_shaper_2_power + (1 - parameters[6]) * minimum_power
+    )
+    turn_off_shaper_power = parameters[10] * off_axis_peak_power
+    turn_off_power = 0
+    on_axis_peak_xrho = 0
+    on_axis_descent_end_xrho = parameters[2]
+    minimum_xrho = parameters[5]
+    minimum_shaper_xrho = (minimum_xrho + on_axis_descent_end_xrho) / 2
+    off_axis_peak_xrho = minimum_xrho + parameters[9]
+    turn_off_xrho = off_axis_peak_xrho + parameters[11]
+    off_axis_shaper_1_xrho = 2 / 3 * minimum_xrho + 1 / 3 * off_axis_peak_xrho
+    off_axis_shaper_2_xrho = 1 / 3 * minimum_xrho + 2 / 3 * off_axis_peak_xrho
+    turn_off_shaper_xrho = 1 / 2 * off_axis_peak_xrho + 1 / 2 * turn_off_xrho
 
-    # Turn-off
-    turn_off_x = off_axis_peak_x + parameters[11]
-    turn_off_y = 0
-
-    # Turn-off shaper
-    turn_off_shaper_x = (off_axis_peak_x + turn_off_x) / 2
-    turn_off_shaper_y = parameters[10] * off_axis_peak_y
-
-    # Collect into array
-    node_xs = [
-        on_axis_peak_x,
-        on_axis_peak_end_x,
-        minimum_shaper_x,
-        minimum_x,
-        off_axis_shaper_1_x,
-        off_axis_shaper_2_x,
-        off_axis_peak_x,
-        turn_off_shaper_x,
-        turn_off_x,
+    xdata = [
+        on_axis_peak_xrho,
+        on_axis_descent_end_xrho,
+        minimum_shaper_xrho,
+        minimum_xrho,
+        off_axis_shaper_1_xrho,
+        off_axis_shaper_2_xrho,
+        off_axis_peak_xrho,
+        turn_off_shaper_xrho,
+        turn_off_xrho,
     ]
-    node_ys = [
-        on_axis_peak_y,
-        on_axis_peak_end_y,
-        minimum_shaper_y,
-        minimum_y,
-        off_axis_shaper_1_y,
-        off_axis_shaper_2_y,
-        off_axis_peak_y,
-        turn_off_shaper_y,
-        turn_off_y,
+    ydata = [
+        on_axis_peak_power,
+        on_axis_descent_end_power,
+        minimum_shaper_power,
+        minimum_power,
+        off_axis_shaper_1_power,
+        off_axis_shaper_2_power,
+        off_axis_peak_power,
+        turn_off_shaper_power,
+        turn_off_power,
     ]
 
-    return np.interp(x, node_xs, node_ys)
+    # Check that the xrho values are monotonically increasing.
+    if not all([xdata[i] < xdata[i + 1] for i in range(len(xdata) - 1)]):
+        raise RuntimeError(
+            f"Xrho coordinates are not monotonically increasing: {xdata}"
+        )
+
+    # Storage for output profiles.
+    qece = np.zeros(len(xrho))
+
+    # Linearly interpolate between each of the points.
+    for i_point in range(len(xdata) - 1):
+        # Get just the pair of points.
+        points_xrho = [xdata[i_point], xdata[i_point + 1]]
+        points_power = [ydata[i_point], ydata[i_point + 1]]
+        # Fit with a straight line between them.
+        cs = CubicSpline(
+            points_xrho, points_power, bc_type=[(2, 0), (2, 0)], extrapolate=False
+        )
+        # Set the values in the profile.
+        qece = np.array([v if v > 0 else qece[i] for i, v in enumerate(cs(xrho))])
+
+    return qece

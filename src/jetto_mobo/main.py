@@ -166,12 +166,7 @@ ecrh_parameter_bounds = torch.tensor(
 
 # Set objective/value function
 if args.value_function == "ga_scalar":
-    # GA objective is a minimisation problem, so we need to flip the sign
-    value_function = (
-        lambda profiles, timetraces: -genetic_algorithm.scalar_cost_function(
-            profiles, timetraces
-        )
-    )
+    value_function = genetic_algorithm.scalar_objective
     value_function_dimension = 1
 elif args.value_function == "scalar":
     value_function = objective.scalar_objective
