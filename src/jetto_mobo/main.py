@@ -87,8 +87,8 @@ parser.add_argument(
 parser.add_argument(
     "--jetto_fail_value",
     type=float,
-    default=-20,
-    help="Value of objective function if JETTO fails (default: -20).",
+    default=0,
+    help="Value of objective function if JETTO fails (default: 0).",
 )
 parser.add_argument(
     "--reference_values",
