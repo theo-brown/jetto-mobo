@@ -14,7 +14,9 @@ venv/
 jetto/templates/*
 jetto/images/*
 2023-*
-data/*/bayesopt/*
-data/*/initialisation/*
-data/benchmark/*
-data/genetic_algorithm/*
+data/ga_piecewise_linear
+data/benchmark
+data/genetic_algorithm
+data/old
+data/mobo
+data/sobo
