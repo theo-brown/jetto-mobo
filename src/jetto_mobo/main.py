@@ -149,20 +149,32 @@ ecrh_function_config = json.loads(args.ecrh_function_config)
 if args.ecrh_function == "ga_piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = genetic_algorithm.piecewise_linear
+    ecrh_parameter_bounds = torch.tensor(
+        [
+            [0, 0.05, 0.01, 0.1, 0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
+            [1, 1, 0.09, 1, 1, 0.29, 0.9, 0.9, 1, 0.75, 0.9, 0.45],
+        ],
+        dtype=dtype,
+        device=device,
+    )
 elif args.ecrh_function == "piecewise_linear":
     n_ecrh_parameters = 12
     ecrh_function = ecrh.piecewise_linear
+    ecrh_parameter_bounds = torch.tensor(
+        [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
+        dtype=dtype,
+        device=device,
+    )
 elif args.ecrh_function == "sum_of_gaussians":
     n_gaussians = ecrh_function_config.get("n", 5)
     n_ecrh_parameters = 2 * n_gaussians
     variance = ecrh_function_config.get("variance", 0.0025)
     ecrh_function = lambda x, p: ecrh.sum_of_gaussians(x, p, variance)
-
-ecrh_parameter_bounds = torch.tensor(
-    [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
-    dtype=dtype,
-    device=device,
-)
+    ecrh_parameter_bounds = torch.tensor(
+        [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
+        dtype=dtype,
+        device=device,
+    )
 
 # Set objective/value function
 if args.value_function == "ga_scalar":
