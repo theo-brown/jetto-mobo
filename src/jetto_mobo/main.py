@@ -13,12 +13,19 @@ from botorch.acquisition.multi_objective.monte_carlo import (
     qNoisyExpectedHypervolumeImprovement,
 )
 from botorch.models import SingleTaskGP
+from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.optim import optimize_acqf
 from botorch.sampling.normal import SobolQMCNormalSampler
 from botorch.utils.sampling import draw_sobol_samples
+from botorch.utils.transforms import normalize, unnormalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
+from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
 
 from jetto_mobo import ecrh, genetic_algorithm, objective, utils
+
+# TODO: Do we need to standardize the outputs?
+# from botorch.models.transforms.outcome import Standardize
+
 
 #################
 # PROGRAM SETUP #
@@ -277,9 +284,21 @@ for i in np.arange(
 
     # Initialise surrogate model
     logger.info("Fitting surrogate model to observed values...")
-    model = SingleTaskGP(ecrh_parameters, value)
-    # Fit the model
-    mll = ExactMarginalLogLikelihood(model.likelihood, model)
+    if args.value_function == "vector":
+        # TODO: check whether we should be using a list of single task GPs or a multi-task GP
+        # ModelListGP is a collection of SingleTaskGP that model each element of the vector objective independently
+        model = ModelListGP(
+            [
+                SingleTaskGP(
+                    normalize(ecrh_parameters, ecrh_parameter_bounds), value[:, i]
+                )
+                for i in range(value.shape[0])
+            ]
+        )
+        mll = SumMarginalLogLikelihood(model.likelihood, model)
+    else:
+        model = SingleTaskGP(normalize(ecrh_parameters, ecrh_parameter_bounds), value)
+        mll = ExactMarginalLogLikelihood(model.likelihood, model)
     fit_gpytorch_mll(mll)
 
     # Define the acquisition function
@@ -292,7 +311,7 @@ for i in np.arange(
         acquisition_function = qNoisyExpectedHypervolumeImprovement(
             model=model,
             ref_point=reference_values,
-            X_baseline=ecrh_parameters,
+            X_baseline=normalize(ecrh_parameters, ecrh_parameter_bounds),
             prune_baseline=True,
             sampler=SobolQMCNormalSampler(
                 sample_shape=torch.Size([args.n_sobol_samples])
@@ -301,7 +320,7 @@ for i in np.arange(
     else:
         acquisition_function = qNoisyExpectedImprovement(
             model=model,
-            X_baseline=ecrh_parameters,
+            X_baseline=normalize(ecrh_parameters, ecrh_parameter_bounds),
             sampler=SobolQMCNormalSampler(
                 sample_shape=torch.Size([args.n_sobol_samples])
             ),
@@ -327,26 +346,29 @@ for i in np.arange(
     # https://botorch.org/v/0.1.1/docs/optimization
     # https://github.com/pytorch/botorch/issues/366#issuecomment-581951153
     logger.info("Selecting candidates using acquisition function...")
-    new_ecrh_parameters, _ = optimize_acqf(
+    candidates, _ = optimize_acqf(
         acq_function=acquisition_function,
         bounds=ecrh_parameter_bounds,
         q=args.batch_size,  # Number of final points to generate
         raw_samples=args.raw_samples,  # Number of points to sample from acqf
         num_restarts=args.n_restarts,  # Number of starting points for multistart optimisation
+        sequential=(
+            True if args.value_function == "vector" else False
+        ),  # Optimise sequentially-greedily if vector # TODO compare with and without
         options={
             # TODO Add to args
             "batch_limit": 5,  # Batch size for local optimisation
             "maxiter": 200,  # Max number of local optimisation iterations per batch
         },
     )
-    new_ecrh_parameters_numpy = new_ecrh_parameters.detach().cpu().numpy()
+    new_ecrh_parameters = unnormalize(candidates.detach(), ecrh_parameter_bounds)
 
     # TODO Get templates from previous points
 
     # Observe values
     logger.info("Calculating value of candidate points...")
     converged_ecrh, converged_q, new_value = ecrh.get_batch_value(
-        ecrh_parameters=new_ecrh_parameters_numpy,
+        ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
         batch_directory=f"{args.output_dir}/bayesopt/{i}",
         ecrh_function=ecrh_function,
         value_function=value_function,
@@ -357,7 +379,7 @@ for i in np.arange(
     # TODO tidy resume if computing value failed
     n_completed_bayesopt_steps += 1
     with h5py.File(output_file, "a") as f:
-        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters_numpy
+        f[f"bayesopt/{i}/ecrh_parameters"] = new_ecrh_parameters.cpu().numpy()
         f[f"bayesopt/{i}/converged_ecrh"] = converged_ecrh
         f[f"bayesopt/{i}/converged_q"] = converged_q
         f[f"bayesopt/{i}/value"] = new_value
