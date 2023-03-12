@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J jetto-mobo
+#SBATCH -J jetto-sobo-ga-piecewise-linear
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
 #SBATCH --nodes=1
@@ -24,7 +24,7 @@ conda activate jetto-mobo
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/sobo/ga_piecewise_linear"
+OUTPUT_DIR="data/sobo/ensemble_ga_pl/9"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM

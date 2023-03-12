@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-piecewise-linear
+#SBATCH -J jetto-sobo-sog-3
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
 #SBATCH --nodes=1
@@ -24,7 +24,7 @@ conda activate jetto-mobo
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/sobo/pl_ensemble/9"
+OUTPUT_DIR="data/sobo/sog_ensemble/3"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
@@ -35,7 +35,7 @@ read -r -d '' COMMAND <<- EOM
     --jetto_timelimit 10400 \
     --value_function ga_scalar \
     --jetto_fail_value 0 \
-    --ecrh_function piecewise_linear
+    --ecrh_function sum_of_gaussians
 EOM
 
 # Resume if target directory exists
