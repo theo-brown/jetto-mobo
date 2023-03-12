@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-piecewise-linear
+#SBATCH -J jetto-sobo-pl-9
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
 #SBATCH --nodes=1
