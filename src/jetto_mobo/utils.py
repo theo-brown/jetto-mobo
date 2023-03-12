@@ -57,3 +57,39 @@ def hex_to_rgba(hex_colour: str, alpha: float):
 
 def rgb_to_rgba(rgb_colour: str, alpha: float):
     return f"rgba{rgb_colour[3:-1]}, {alpha})"
+
+
+def get_pareto_dominant_mask(
+    objective_values: np.ndarray, allow_zero: bool = False
+) -> np.ndarray:
+    """Compute a mask that selects only Pareto-optimal solutions
+
+    Parameters
+    ----------
+    objective_values : np.ndarray
+        An n_points x n_objectives array.
+
+    allow_zero : bool
+        If False, points with a value of zero for any objective are excluded.
+
+    Returns
+    -------
+    is_dominant
+        An n_points boolean array, True where points are Pareto optimal.
+    """
+    is_dominant = np.zeros(objective_values.shape[0], dtype=bool)
+    for i, objective_value in enumerate(objective_values):
+        strictly_better_in_one_objective = (objective_values > objective_value).any(
+            axis=1
+        )
+        at_least_as_good_in_all_objectives = (objective_values >= objective_value).all(
+            axis=1
+        )
+        is_dominant[i] = ~np.any(
+            at_least_as_good_in_all_objectives & strictly_better_in_one_objective
+        )
+
+    if allow_zero:
+        return is_dominant
+    else:
+        return is_dominant & np.all(objective_values > 0, axis=1)
