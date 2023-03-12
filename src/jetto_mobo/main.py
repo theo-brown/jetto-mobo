@@ -68,6 +68,13 @@ parser.add_argument(
     help="Passed to SobolQMCNormalSampler as `sample_shape` (default: 256).",
 )
 parser.add_argument(
+    "--acqf_optimisation_mode",
+    type=str,
+    choices=["sequential", "joint"],
+    default="joint",
+    help="Whether to use sequential or joint optimisation for generating candidates from the acquisition function.",
+)
+parser.add_argument(
     "--ecrh_function",
     type=str,
     choices=[
@@ -87,7 +94,7 @@ parser.add_argument(
 parser.add_argument(
     "--value_function",
     type=str,
-    choices=["ga_scalar", "scalar", "vector"],
+    choices=["ga_scalar", "scalar", "vector", "ga_vector"],
     default="ga_scalar",
     help="Value function to use (default: 'ga_scalar').",
 )
@@ -186,18 +193,29 @@ elif args.ecrh_function == "sum_of_gaussians":
 # Set objective/value function
 if args.value_function == "ga_scalar":
     value_function = genetic_algorithm.scalar_objective
-    value_function_dimension = 1
+    n_objectives = 1
 elif args.value_function == "scalar":
     value_function = objective.scalar_objective
-    value_function_dimension = 1
+    n_objectives = 1
+elif args.value_function == "ga_vector":
+    value_function = genetic_algorithm.vector_objective
+    n_objectives = 7
+    if args.reference_values is None:
+        reference_values = np.zeros(n_objectives)
+    elif len(args.reference_values) != n_objectives:
+        raise ValueError(
+            f"Received {len(args.reference_values)} values for --reference_values, expected {n_objectives}."
+        )
+    else:
+        reference_values = args.reference_values
 elif args.value_function == "vector":
     value_function = objective.vector_objective
-    value_function_dimension = 7
+    n_objectives = 7
     if args.reference_values is None:
-        reference_values = np.zeros(value_function_dimension)
-    elif len(args.reference_values) != value_function_dimension:
+        reference_values = np.zeros(n_objectives)
+    elif len(args.reference_values) != n_objectives:
         raise ValueError(
-            f"Received {len(args.reference_values)} values for --reference_values, expected {value_function_dimension}."
+            f"Received {len(args.reference_values)} values for --reference_values, expected {n_objectives}."
         )
     else:
         reference_values = args.reference_values
@@ -256,6 +274,7 @@ else:
         timelimit=args.jetto_timelimit,
     )
     if np.all(np.isnan(value)):
+        # TODO: retry rather than exit
         raise RuntimeError(
             "Failed to generate initial values; all initial points failed to converge."
         )
@@ -288,11 +307,11 @@ for i in np.arange(
         # TODO: check whether we should be using a list of single task GPs or a multi-task GP
         # ModelListGP is a collection of SingleTaskGP that model each element of the vector objective independently
         model = ModelListGP(
-            [
+            *[
                 SingleTaskGP(
-                    normalize(ecrh_parameters, ecrh_parameter_bounds), value[:, i]
+                    normalize(ecrh_parameters, ecrh_parameter_bounds), value[:, i].unsqueeze(1)
                 )
-                for i in range(value.shape[0])
+                for i in range(n_objectives)
             ]
         )
         mll = SumMarginalLogLikelihood(model.likelihood, model)
@@ -352,9 +371,7 @@ for i in np.arange(
         q=args.batch_size,  # Number of final points to generate
         raw_samples=args.raw_samples,  # Number of points to sample from acqf
         num_restarts=args.n_restarts,  # Number of starting points for multistart optimisation
-        sequential=(
-            True if args.value_function == "vector" else False
-        ),  # Optimise sequentially-greedily if vector # TODO compare with and without
+        sequential=True if args.acqf_optimisation_mode == "sequential" else False, 
         options={
             # TODO Add to args
             "batch_limit": 5,  # Batch size for local optimisation
@@ -367,6 +384,7 @@ for i in np.arange(
 
     # Observe values
     logger.info("Calculating value of candidate points...")
+    # TODO: handle if new_value are all Nones
     converged_ecrh, converged_q, new_value = ecrh.get_batch_value(
         ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
         batch_directory=f"{args.output_dir}/bayesopt/{i}",
