@@ -4,6 +4,7 @@ from typing import Iterable, Optional
 
 import numpy as np
 from matplotlib import colormaps
+from plotly.colors import hex_to_rgb
 
 
 class ElapsedTimeFormatter(logging.Formatter):
@@ -47,3 +48,12 @@ def rgba_colormap(
     colormap = colormaps[colormap_name]
     color = colormap((x - min_x) / (max_x - min_x))
     return f"rgba({int(255 * color[0])}, {int(255 * color[1])}, {int(255 * color[2])}, {alpha})"
+
+
+def hex_to_rgba(hex_colour: str, alpha: float):
+    r, g, b = hex_to_rgb(hex_colour)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+def rgb_to_rgba(rgb_colour: str, alpha: float):
+    return f"rgba{rgb_colour[3:-1]}, {alpha})"
