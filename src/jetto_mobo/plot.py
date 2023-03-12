@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from jetto_tools.results import JettoResults
 from plotly.subplots import make_subplots
 
-from jetto_mobo.genetic_algorithm import scalar_cost_function
+from jetto_mobo.genetic_algorithm import scalar_objective
 from jetto_mobo.utils import rgba_colormap
 
 
@@ -17,12 +17,12 @@ def animation(
     output_dir: str,
     title: str,
     benchmark_path: str = "./data/benchmark",
-    objective_range=[-20, 0],
+    objective_range=[0.6, 1],
 ):
     benchmark = JettoResults(path=benchmark_path)
     profiles = benchmark.load_profiles()
     timetraces = benchmark.load_timetraces()
-    benchmark_value = scalar_cost_function(profiles, timetraces)
+    benchmark_value = scalar_objective(profiles, timetraces)
     benchmark_ecrh = profiles["QECE"][-1]
     benchmark_q = profiles["Q"][-1]
     benchmark_xrho = profiles["XRHO"][-1]
@@ -71,10 +71,13 @@ def animation(
                 )
             return max_value, q_traces, ecrh_traces
 
-        n_completed_bayesopt_steps = hdf5_file["/"].attrs["n_completed_bayesopt_steps"]
+        # TODO: change this so it works with GA results
+        n_completed_optimisation_steps = hdf5_file["/"].attrs[
+            "n_completed_bayesopt_steps"
+        ]
         batch_size = hdf5_file["/"].attrs["batch_size"]
 
-        step = np.arange(n_completed_bayesopt_steps + 1)
+        step = np.arange(n_completed_optimisation_steps + 1)
         value = np.empty(len(step))
 
         # Initialisation
@@ -120,7 +123,7 @@ def animation(
         )
 
         frames = []
-        for bayesopt_step in np.arange(0, n_completed_bayesopt_steps + 1):
+        for optimisation_step in np.arange(0, n_completed_optimisation_steps + 1):
             figure = make_subplots(
                 rows=2, cols=2, specs=[[{"colspan": 2}, {}], [{}, {}]]
             )
@@ -137,7 +140,7 @@ def animation(
                 cols=[1, 1, 1, 2],
             )
 
-            if bayesopt_step == 0:
+            if optimisation_step == 0:
                 # Initialisation data
                 figure.add_traces(
                     initial_ecrh_traces,
@@ -151,8 +154,9 @@ def animation(
                 )
             else:
                 # Bayesopt data
-                value[bayesopt_step], q_traces, ecrh_traces = get_traces(
-                    f"bayesopt/{bayesopt_step}"
+                # TODO: change this so it works with GA results
+                value[optimisation_step], q_traces, ecrh_traces = get_traces(
+                    f"bayesopt/{optimisation_step}"
                 )
                 figure.add_traces(
                     ecrh_traces,
@@ -166,8 +170,8 @@ def animation(
             # Objective trace
             figure.add_trace(
                 go.Scatter(
-                    x=step[: bayesopt_step + 1],
-                    y=value[: bayesopt_step + 1],
+                    x=step[: optimisation_step + 1],
+                    y=value[: optimisation_step + 1],
                     mode="lines+markers",
                     showlegend=False,
                     line_color=plotly.colors.qualitative.Bold[2],
@@ -206,7 +210,7 @@ def animation(
                 title_text="Optimisation step",
                 row=1,
                 col=1,
-                range=[0, n_completed_bayesopt_steps],
+                range=[0, n_completed_optimisation_steps],
             )
             figure.update_yaxes(title_text="Maximum objective value", row=1, col=1)
             figure.update_xaxes(
@@ -216,7 +220,7 @@ def animation(
                 title_text="ECRH power density",
                 row=2,
                 col=1,
-                range=[0, 1.25 * np.max(benchmark["ecrh"])],
+                range=[0, 1.25 * np.max(benchmark_ecrh)],
             )
             figure.update_xaxes(
                 title_text="Normalised radius", row=2, col=2, range=[0, 1]
@@ -225,7 +229,7 @@ def animation(
                 title_text="Safety factor",
                 row=2,
                 col=2,
-                range=[0, 1.1 * np.max(benchmark["q"])],
+                range=[0, 1.1 * np.max(benchmark_q)],
             )
             figure.update_layout(
                 template="simple_white",
