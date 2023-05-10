@@ -85,6 +85,10 @@ def get_pareto_dominant_mask(
         at_least_as_good_in_all_objectives = (objective_values >= objective_value).all(
             axis=1
         )
+        # A point is Pareto-dominated if there's a point that we could move to that
+        # improves performance in one objective without losing performance in any
+        # other objective
+        # A point is Pareto-dominant if there are no points that dominate it
         is_dominant[i] = ~np.any(
             at_least_as_good_in_all_objectives & strictly_better_in_one_objective
         )
