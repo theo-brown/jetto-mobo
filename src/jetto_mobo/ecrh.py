@@ -5,10 +5,9 @@ from typing import Callable, Iterable, Optional, Tuple
 import jetto_tools
 import netCDF4
 import numpy as np
+from jetto_mobo import jetto_container, utils
 from jetto_tools.results import JettoResults
 from scipy.interpolate import interp1d
-
-from jetto_mobo import jetto_container, utils
 
 
 def _gaussian(
@@ -152,7 +151,7 @@ def get_batch_value(
     ecrh_function: Callable[[np.ndarray, np.ndarray], np.ndarray],
     value_function: Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray],
     timelimit: Optional[int] = None,
-    jetto_template: str = "jetto/templates/spr45-v9",
+    jetto_template: str = "jetto/templates/spr45",
     jetto_image: str = "jetto/images/sim.v220922.sif",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute the given value function for each element in a batch array of ECRH parameters.
@@ -171,7 +170,7 @@ def get_batch_value(
         A function that takes JETTO `profiles` and `timetraces` datasets, and returns a value associated with the ECRH profile. Output shape `(c,)`.
     timelimit : Optional[int], default None
         Time limit in seconds for JETTO runs. If None, no timelimit imposed.
-    jetto_template : str, default "jetto/templates/spr45-v9"
+    jetto_template : str, default "jetto/templates/spr45"
         Directory of JETTO template run, used as a base to create the new JETTO configurations.
     jetto_image : str, default "jetto/images/sim.v220922.sif"
         Path to the JETTO .sif Singularity container image.

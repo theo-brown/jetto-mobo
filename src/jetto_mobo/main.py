@@ -20,7 +20,6 @@ from botorch.utils.sampling import draw_sobol_samples
 from botorch.utils.transforms import normalize, unnormalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
-
 from jetto_mobo import ecrh, genetic_algorithm, objective, utils
 
 # TODO: Do we need to standardize the outputs?
@@ -116,6 +115,13 @@ parser.add_argument(
     type=float,
     default=10400,
     help="Maximum number of seconds to wait for JETTO to complete; if < 0, run until complete (default: 10400).",
+)
+parser.add_argument(
+    "--jetto_template",
+    type=str,
+    choices=["spr45", "spr54", "spr45-qlknn"],
+    default="spr45",
+    help="JETTO template to use (default: spr45).",
 )
 parser.add_argument(
     "--resume",
@@ -272,6 +278,7 @@ else:
         ecrh_function=ecrh_function,
         value_function=value_function,
         timelimit=args.jetto_timelimit,
+        jetto_template=f"jetto/templates/{args.jetto_template}",
     )
     if np.all(np.isnan(value)):
         # TODO: retry rather than exit
@@ -391,6 +398,7 @@ for i in np.arange(
         ecrh_function=ecrh_function,
         value_function=value_function,
         timelimit=args.jetto_timelimit,
+        jetto_template=f"jetto/templates/{args.jetto_template}",
     )
 
     # Update logged data
