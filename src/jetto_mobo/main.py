@@ -118,6 +118,13 @@ parser.add_argument(
     help="Maximum number of seconds to wait for JETTO to complete; if < 0, run until complete (default: 10400).",
 )
 parser.add_argument(
+    "--jetto_template",
+    type=str,
+    choices=["spr45", "spr54", "spr45-qlknn"]
+    default="spr45",
+    help="JETTO template to use (default: spr45).",
+)
+parser.add_argument(
     "--resume",
     action="store_true",
     help="Resume optimisation from `output_dir`.",
@@ -272,6 +279,7 @@ else:
         ecrh_function=ecrh_function,
         value_function=value_function,
         timelimit=args.jetto_timelimit,
+        jetto_template=f"jetto/templates/{args.jetto_template}",
     )
     if np.all(np.isnan(value)):
         # TODO: retry rather than exit
@@ -391,6 +399,7 @@ for i in np.arange(
         ecrh_function=ecrh_function,
         value_function=value_function,
         timelimit=args.jetto_timelimit,
+        jetto_template=f"jetto/templates/{args.jetto_template}",
     )
 
     # Update logged data
