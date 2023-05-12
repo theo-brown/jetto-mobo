@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import colormaps
 from plotly.colors import hex_to_rgb
 
+colours = ['#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB']
 
 class ElapsedTimeFormatter(logging.Formatter):
     def format(self, record):
