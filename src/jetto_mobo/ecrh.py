@@ -5,10 +5,9 @@ from typing import Callable, Iterable, Optional, Tuple
 import jetto_tools
 import netCDF4
 import numpy as np
+from jetto_mobo import jetto_container, utils
 from jetto_tools.results import JettoResults
 from scipy.interpolate import interp1d
-
-from jetto_mobo import jetto_container, utils
 
 
 def _gaussian(
@@ -111,6 +110,41 @@ def sigmoid_cubic_spline(x: Iterable[float], parameters: Iterable[float]):
     return _sigmoid(spline(x))
 
 
+def unit_interval_logspace(N: int) -> np.ndarray:
+    """Generate N logarithmically spaced points in the unit interval [0, 1].
+
+    Parameters
+    ----------
+    N : int
+        NUmber of points to generate
+
+    Returns
+    -------
+    np.ndarray
+        Array of N points logarithmically spaced in the unit interval [0, 1].
+    """
+    return (np.logspace(1, 2, N) - 10) / 90
+
+
+def sum_of_gaussians_fixed_log_means(
+    x: np.ndarray, xmax: float, variances: np.ndarray, amplitudes: np.ndarray
+) -> np.ndarray:
+    n_gaussians = len(variances)
+    means = unit_interval_logspace(n_gaussians) * xmax
+    # Enforce symmetry about 0
+    # The first element of means is 0, so we mirror around it
+    means = np.concatenate([-np.flip(means[1:]), means])
+    variances = np.concatenate([np.flip(variances[1:]), variances])
+    amplitudes = np.concatenate([np.flip(amplitudes[1:]), amplitudes])
+    return np.sum(
+        [
+            _gaussian(x, mean, variance, amplitude)
+            for mean, variance, amplitude in zip(means, variances, amplitudes)
+        ],
+        axis=0,
+    )
+
+
 def create_config(
     template_directory: str,
     config_directory: str,
@@ -152,7 +186,7 @@ def get_batch_value(
     ecrh_function: Callable[[np.ndarray, np.ndarray], np.ndarray],
     value_function: Callable[[netCDF4.Dataset, netCDF4.Dataset], np.ndarray],
     timelimit: Optional[int] = None,
-    jetto_template: str = "jetto/templates/spr45-v9",
+    jetto_template: str = "jetto/templates/spr45",
     jetto_image: str = "jetto/images/sim.v220922.sif",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute the given value function for each element in a batch array of ECRH parameters.
@@ -171,7 +205,7 @@ def get_batch_value(
         A function that takes JETTO `profiles` and `timetraces` datasets, and returns a value associated with the ECRH profile. Output shape `(c,)`.
     timelimit : Optional[int], default None
         Time limit in seconds for JETTO runs. If None, no timelimit imposed.
-    jetto_template : str, default "jetto/templates/spr45-v9"
+    jetto_template : str, default "jetto/templates/spr45"
         Directory of JETTO template run, used as a base to create the new JETTO configurations.
     jetto_image : str, default "jetto/images/sim.v220922.sif"
         Path to the JETTO .sif Singularity container image.
