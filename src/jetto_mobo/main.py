@@ -20,6 +20,7 @@ from botorch.utils.sampling import draw_sobol_samples
 from botorch.utils.transforms import normalize, unnormalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
+
 from jetto_mobo import ecrh, genetic_algorithm, objective, utils
 
 # TODO: Do we need to standardize the outputs?
@@ -80,8 +81,9 @@ parser.add_argument(
         "ga_piecewise_linear",
         "piecewise_linear",
         "sum_of_gaussians",
+        "sum_of_gaussians_fixed_log_means",
     ],
-    default="piecewise_linear",
+    default="ga_piecewise_linear",
     help="ECRH function to use (default: 'ga_piecewise_linear').",
 )
 parser.add_argument(
@@ -190,6 +192,17 @@ elif args.ecrh_function == "sum_of_gaussians":
     n_ecrh_parameters = 2 * n_gaussians
     variance = ecrh_function_config.get("variance", 0.0025)
     ecrh_function = lambda x, p: ecrh.sum_of_gaussians(x, p, variance)
+    ecrh_parameter_bounds = torch.tensor(
+        [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
+        dtype=dtype,
+        device=device,
+    )
+elif args.ecrh_function == "sum_of_gaussians_fixed_log_means":
+    n_gaussians = ecrh_function_config.get("n", 5)
+    n_ecrh_parameters = 2 * n_gaussians + 1
+    ecrh_function = lambda x, p: ecrh.sum_of_gaussians_fixed_log_means(
+        x, xmax=p[0], variances=p[1 : n_gaussians + 1], amplitudes=p[n_gaussians + 1 :]
+    )
     ecrh_parameter_bounds = torch.tensor(
         [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
         dtype=dtype,
@@ -316,7 +329,8 @@ for i in np.arange(
         model = ModelListGP(
             *[
                 SingleTaskGP(
-                    normalize(ecrh_parameters, ecrh_parameter_bounds), value[:, i].unsqueeze(1)
+                    normalize(ecrh_parameters, ecrh_parameter_bounds),
+                    value[:, i].unsqueeze(1),
                 )
                 for i in range(n_objectives)
             ]
@@ -378,7 +392,7 @@ for i in np.arange(
         q=args.batch_size,  # Number of final points to generate
         raw_samples=args.raw_samples,  # Number of points to sample from acqf
         num_restarts=args.n_restarts,  # Number of starting points for multistart optimisation
-        sequential=True if args.acqf_optimisation_mode == "sequential" else False, 
+        sequential=True if args.acqf_optimisation_mode == "sequential" else False,
         options={
             # TODO Add to args
             "batch_limit": 5,  # Batch size for local optimisation
