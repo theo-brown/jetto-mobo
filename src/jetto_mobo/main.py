@@ -81,7 +81,7 @@ parser.add_argument(
         "ga_piecewise_linear",
         "piecewise_linear",
         "sum_of_gaussians",
-        "sum_of_gaussians_fixed_log_means",
+        "sum_of_gaussians_fixed_means",
     ],
     default="ga_piecewise_linear",
     help="ECRH function to use (default: 'ga_piecewise_linear').",
@@ -197,11 +197,18 @@ elif args.ecrh_function == "sum_of_gaussians":
         dtype=dtype,
         device=device,
     )
-elif args.ecrh_function == "sum_of_gaussians_fixed_log_means":
+elif args.ecrh_function == "sum_of_gaussians_fixed_means":
     n_gaussians = ecrh_function_config.get("n", 5)
     n_ecrh_parameters = 2 * n_gaussians + 1
-    ecrh_function = lambda x, p: ecrh.sum_of_gaussians_fixed_log_means(
-        x, xmax=p[0], variances=p[1 : n_gaussians + 1], amplitudes=p[n_gaussians + 1 :]
+    ecrh_function = lambda x, p: ecrh.sum_of_gaussians_fixed_means(
+        x,
+        xmax=p[0],
+        variances=p[1 : n_gaussians + 1],
+        amplitudes=p[n_gaussians + 1 :],
+        min_variance=5e-4,
+        max_variance=1e-2,
+        spacing="log",
+        variance_scaling="log",
     )
     ecrh_parameter_bounds = torch.tensor(
         [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
