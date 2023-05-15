@@ -5,9 +5,10 @@ from typing import Callable, Iterable, Optional, Tuple
 import jetto_tools
 import netCDF4
 import numpy as np
-from jetto_mobo import jetto_container, utils
 from jetto_tools.results import JettoResults
 from scipy.interpolate import interp1d
+
+from jetto_mobo import jetto_container, utils
 
 
 def _gaussian(
@@ -126,16 +127,43 @@ def unit_interval_logspace(N: int) -> np.ndarray:
     return (np.logspace(1, 2, N) - 10) / 90
 
 
-def sum_of_gaussians_fixed_log_means(
-    x: np.ndarray, xmax: float, variances: np.ndarray, amplitudes: np.ndarray
+def sum_of_gaussians_fixed_means(
+    x: np.ndarray,
+    xmax: float,
+    variances: np.ndarray,
+    amplitudes: np.ndarray,
+    min_variance: float = 5e-4,
+    max_variance: float = 1e-2,
+    spacing: str = "log",
+    variance_scaling: str = "log",
 ) -> np.ndarray:
     n_gaussians = len(variances)
-    means = unit_interval_logspace(n_gaussians) * xmax
+
+    # Generate Gaussian means
+    if spacing == "log":
+        means = unit_interval_logspace(n_gaussians) * xmax
+    elif spacing == "linear":
+        means = np.linspace(0, xmax, n_gaussians)
+    else:
+        raise ValueError(f"Unknown spacing {spacing}.")
+
     # Enforce symmetry about 0
     # The first element of means is 0, so we mirror around it
     means = np.concatenate([-np.flip(means[1:]), means])
     variances = np.concatenate([np.flip(variances[1:]), variances])
     amplitudes = np.concatenate([np.flip(amplitudes[1:]), amplitudes])
+
+    # Scale variances
+    if variance_scaling == "log":
+        variances = np.exp(
+            np.log(min_variance)
+            + variances * (np.log(max_variance) - np.log(min_variance))
+        )
+    elif variance_scaling == "linear":
+        variances = min_variance + variances * (max_variance - min_variance)
+    else:
+        raise ValueError(f"Unknown variance scaling {variance_scaling}.")
+
     return np.sum(
         [
             _gaussian(x, mean, variance, amplitude)
