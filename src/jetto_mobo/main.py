@@ -341,6 +341,16 @@ for i in np.arange(
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
     fit_gpytorch_mll(mll)
 
+    # Save model
+    checkpoint = {
+        "model": model.state_dict(),
+        "training_data": output_file,
+        "ecrh_parameter_bounds": ecrh_parameter_bounds,
+        "ecrh_parameters": ecrh_parameters,
+        "observed_values": value,
+    }
+    torch.save(checkpoint, os.path.join(args.output_dir, "model.pt"))
+
     # Define the acquisition function
     # Choice of sampler:
     # Sobol is a quasirandom number generation scheme - generates low-discrepancy sequences

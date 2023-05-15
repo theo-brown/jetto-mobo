@@ -57,7 +57,15 @@ def train_model_posthumously(hdf5_file, output_file):
     mll = ExactMarginalLogLikelihood(model.likelihood, model)
 
     fit_gpytorch_mll(mll)
-    torch.save(model.state_dict(), output_file)
+
+    checkpoint = {
+        "model": model.state_dict(),
+        "training_data": hdf5_file,
+        "ecrh_parameter_bounds": ecrh_parameter_bounds,
+        "ecrh_parameters": ecrh_parameters,
+        "observed_values": value,
+    }
+    torch.save(checkpoint, output_file)
 
 
 if __name__ == "__main__":
