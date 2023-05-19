@@ -20,7 +20,6 @@ from botorch.utils.sampling import draw_sobol_samples
 from botorch.utils.transforms import normalize, unnormalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
-
 from jetto_mobo import ecrh, genetic_algorithm, objective, utils
 
 # TODO: Do we need to standardize the outputs?
@@ -205,13 +204,26 @@ elif args.ecrh_function == "sum_of_gaussians_fixed_means":
         xmax=p[0],
         variances=p[1 : n_gaussians + 1],
         amplitudes=p[n_gaussians + 1 :],
-        min_variance=5e-4,
-        max_variance=1e-2,
-        spacing="log",
-        variance_scaling="log",
+        min_variance=ecrh_function_config.get("min_variance", 1e-3),
+        max_variance=ecrh_function_config.get("max_variance", 5e-2),
+        spacing=ecrh_function_config.get("spacing", "log"),
+        variance_scaling=ecrh_function_config.get("variance_scaling", "log"),
     )
+    xmax_lower_bound = ecrh_function_config.get("xmax_lower_bound", 0.1)
+    xmax_upper_bound = ecrh_function_config.get("xmax_upper_bound", 0.9)
+    amplitude_lower_bounds = [0] * n_gaussians
+    amplitude_upper_bounds = [1] * n_gaussians
+    variance_lower_bounds = [0] * n_gaussians
+    variance_upper_bounds = [1] * n_gaussians
     ecrh_parameter_bounds = torch.tensor(
-        [[0] * n_ecrh_parameters, [1] * n_ecrh_parameters],
+        [
+            [xmax_lower_bound]
+            + variance_lower_bounds
+            + amplitude_lower_bounds,  # Lower bounds
+            [xmax_upper_bound]
+            + variance_upper_bounds
+            + amplitude_upper_bounds,  # Upper bounds
+        ],
         dtype=dtype,
         device=device,
     )

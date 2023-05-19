@@ -5,10 +5,9 @@ from typing import Callable, Iterable, Optional, Tuple
 import jetto_tools
 import netCDF4
 import numpy as np
+from jetto_mobo import jetto_container, utils
 from jetto_tools.results import JettoResults
 from scipy.interpolate import interp1d
-
-from jetto_mobo import jetto_container, utils
 
 
 def _gaussian(
@@ -132,7 +131,7 @@ def sum_of_gaussians_fixed_means(
     xmax: float,
     variances: np.ndarray,
     amplitudes: np.ndarray,
-    min_variance: float = 5e-4,
+    min_variance: float = 1e-4,
     max_variance: float = 1e-2,
     spacing: str = "log",
     variance_scaling: str = "log",
