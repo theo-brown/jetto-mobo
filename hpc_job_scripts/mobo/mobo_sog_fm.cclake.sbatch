@@ -1,45 +1,42 @@
 #!/bin/bash
-#SBATCH -J jetto-mobo-ga-piecewise-linear
-#SBATCH -A UKAEA-AP002-GPU
-#SBATCH -p ampere
+#SBATCH -J jetto-mobo-sog-fm
+#SBATCH -A UKAEA-AP002-CPU
+#SBATCH -p cclake
+#SBATCH --output=%x_%j.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=12
+#SBATCH --exclusive
 #SBATCH --time=24:00:00
 #SBATCH --mail-type=ALL
 
 unset OMP_NUM_THREADS
 
-echo "JETTO-MOBO"
-echo "=========="
+echo "JETTO-MOBO-SOG-FM"
+echo "================="
 echo "JobID: $SLURM_JOB_ID"
 
 # Set up environment
 . /etc/profile.d/modules.sh
 module purge
-module load rhel8/default-amp
+module load rhel8/default-ccl
 module load miniconda/3
 source /home/tab53/.bashrc
 conda activate jetto-mobo
 
-# Set correct path for torch libraries
-LD_LIBRARY_PATH=$CONDA_PREFIX/lib/python3.10/site-packages/nvidia/cublas/lib/:$LD_LIBRARY_PATH
-
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/mobo/ga_piecewise_linear_joint"
+OUTPUT_DIR="data/mobo/sog_fm/$SLURM_ARRAY_TASK_ID"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
     $CONDA_PREFIX/bin/python src/jetto_mobo/main.py \
     --output_dir $OUTPUT_DIR \
     --n_bayesopt_steps 10 \
-    --batch_size 5 \
+    --batch_size 30 \
     --jetto_timelimit 10400 \
     --value_function vector \
     --jetto_fail_value 0 \
-    --ecrh_function ga_piecewise_linear \
+    --ecrh_function sum_of_gaussians_fixed_means \
     --acqf_optimisation_mode joint
 EOM
 

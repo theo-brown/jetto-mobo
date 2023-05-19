@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-sum-of-gaussians
+#SBATCH -J jetto-sobo-sog
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
 #SBATCH --array=1-10
-#SBATCH --output=sog_%A_%a.out
+#SBATCH --output=%x_%A_%a.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -12,7 +12,7 @@
 
 unset OMP_NUM_THREADS
 
-echo "JETTO-MOBO-SOG"
+echo "JETTO-SOBO-SOG"
 echo "=============="
 echo "JobID: $SLURM_JOB_ID"
 
