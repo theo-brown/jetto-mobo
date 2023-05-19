@@ -1,7 +1,9 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-ga-pl-1
+#SBATCH -J jetto-sobo-sum-of-gaussians
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
+#SBATCH --array=1-10
+#SBATCH --output=sog_%A_%a.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -10,8 +12,8 @@
 
 unset OMP_NUM_THREADS
 
-echo "JETTO-MOBO"
-echo "=========="
+echo "JETTO-MOBO-SOG"
+echo "=============="
 echo "JobID: $SLURM_JOB_ID"
 
 # Set up environment
@@ -24,7 +26,7 @@ conda activate jetto-mobo
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/sobo/ga_pl_ensemble/1"
+OUTPUT_DIR="data/sobo/sog/$SLURM_ARRAY_TASK_ID"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
@@ -35,7 +37,7 @@ read -r -d '' COMMAND <<- EOM
     --jetto_timelimit 10400 \
     --value_function ga_scalar \
     --jetto_fail_value 0 \
-    --ecrh_function ga_piecewise_linear
+    --ecrh_function sum_of_gaussians
 EOM
 
 # Resume if target directory exists

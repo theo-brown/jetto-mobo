@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J jetto-mobo
+#SBATCH -J jetto-mobo-sum-of-gaussians
 #SBATCH -A UKAEA-AP002-GPU
 #SBATCH -p ampere
 #SBATCH --nodes=1

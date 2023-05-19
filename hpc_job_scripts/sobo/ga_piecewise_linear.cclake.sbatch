@@ -1,7 +1,9 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-ga-pl-6
+#SBATCH -J jetto-sobo-ga-piecewise-linear
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
+#SBATCH --array=1-10
+#SBATCH --output=sobo_ga_pl_%A_%a.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
@@ -24,7 +26,7 @@ conda activate jetto-mobo
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/sobo/ga_pl_ensemble/6"
+OUTPUT_DIR="data/sobo/ga_pl/$SLURM_ARRAY_TASK_ID"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM

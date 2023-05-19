@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-pl-1
+#SBATCH -J jetto-sobo-spr45-qlknn
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
 #SBATCH --nodes=1
@@ -24,7 +24,7 @@ conda activate jetto-mobo
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/sobo/pl_ensemble/1"
+OUTPUT_DIR="data/sobo/transfer_learning/spr45_qlknn_benchmark"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
@@ -35,7 +35,8 @@ read -r -d '' COMMAND <<- EOM
     --jetto_timelimit 10400 \
     --value_function ga_scalar \
     --jetto_fail_value 0 \
-    --ecrh_function piecewise_linear
+    --ecrh_function ga_piecewise_linear \
+    --jetto_template spr45-qlknn
 EOM
 
 # Resume if target directory exists

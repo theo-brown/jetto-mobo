@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J jetto-sobo-sog-3
+#SBATCH -J jetto-sobo-spr54-transfer
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p cclake
 #SBATCH --nodes=1
@@ -24,24 +24,16 @@ conda activate jetto-mobo
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo
-OUTPUT_DIR="data/sobo/sog_ensemble/3"
+OUTPUT_DIR="data/sobo/transfer_learning/spr54_transfer"
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
-    $CONDA_PREFIX/bin/python src/jetto_mobo/main.py \
+    $CONDA_PREFIX/bin/python src/jetto_mobo/main_transfer.py \
     --output_dir $OUTPUT_DIR \
-    --n_bayesopt_steps 10 \
-    --batch_size 30 \
-    --jetto_timelimit 10400 \
-    --value_function ga_scalar \
-    --jetto_fail_value 0 \
-    --ecrh_function sum_of_gaussians
+    --checkpoint data/sobo/transfer_learning/ga_pl_spr45.pt \
+    --n_points 30 \
+    --jetto_template spr54
 EOM
-
-# Resume if target directory exists
-if [ -d "$OUTPUT_DIR" ]; then
-    COMMAND="$COMMAND --resume"
-fi
 
 # Execute
 echo "Executing command: $COMMAND"
