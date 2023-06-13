@@ -5,9 +5,10 @@ from typing import Callable, Iterable, Optional, Tuple
 import jetto_tools
 import netCDF4
 import numpy as np
-from jetto_mobo import jetto_container, utils
 from jetto_tools.results import JettoResults
 from scipy.interpolate import interp1d
+
+from jetto_mobo import jetto_container, utils
 
 
 def _gaussian(
@@ -108,6 +109,30 @@ def sigmoid_cubic_spline(x: Iterable[float], parameters: Iterable[float]):
 
     spline = interp1d(node_xs, node_ys, kind="cubic")
     return _sigmoid(spline(x))
+
+
+def _squared_exponential_kernel(x1, x2, l, scale_factor):
+    return scale_factor**2 * np.exp(-((x1 - x2) ** 2) / (2 * l**2))
+
+
+def _covariance_matrix(x, kernel):
+    return kernel(x[:, None], x[None, :])
+
+
+def gp(x: Iterable[float], parameters: Iterable[float]):
+    lengthscale = parameters[0]
+    y0 = parameters[1]
+    xN = parameters[-1]
+    node_xs = parameters[2:-1:2]
+    node_ys = parameters[3:-1:2]
+    K = _covariance_matrix(
+        x=node_xs,
+        kernel=lambda x1, x2: _squared_exponential_kernel(x1, x2, lengthscale, 1),
+    )
+    coefficients = np.linalg.inv(K.T * K) @ (K @ node_ys)
+    return np.sum(
+        [coefficients[i] * kernel(x, node_xs[i]) for i in range(len(node_xs))], axis=0
+    )
 
 
 def unit_interval_logspace(N: int) -> np.ndarray:

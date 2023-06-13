@@ -1,13 +1,13 @@
 import asyncio
 import logging
 import os
-import shutil
-import tarfile
 from typing import Iterable, Optional, Tuple, Union
 from uuid import uuid4
-
+import tarfile
 import netCDF4
 from jetto_tools.results import JettoResults
+import shutil
+from jetto_mobo import utils
 
 
 async def run(
@@ -41,8 +41,13 @@ async def run(
     # Run name is only used internally in this container, so it doesn't matter what it's called
     run_name = "run_name"
 
+    logger = utils.get_logger(
+        name=f"jetto-mobo.container.{container_id}", level=logging.INFO
+    )
+
     with open(f"{config_directory}/singularity.log", "a") as log_file:
         # Start a container
+        # logger.info(f"Creating container...")
         create_container = await asyncio.create_subprocess_exec(
             "singularity",
             "instance",
@@ -60,6 +65,7 @@ async def run(
         await create_container.wait()
 
         # Exec JETTO in the container
+        logger.info("Starting JETTO container...")
         run_jetto = await asyncio.create_subprocess_exec(
             "singularity",
             "exec",
@@ -84,6 +90,7 @@ async def run(
             timeout = True
         finally:
             # Close the container
+            # logger.info("Closing container...")
             delete_container = await asyncio.create_subprocess_exec(
                 "singularity",
                 "instance",
@@ -94,18 +101,23 @@ async def run(
             )
             await delete_container.wait()
 
+    logger.info(
+        f"JETTO container terminated with return code {run_jetto.returncode}"
+        + (f" (timed out after {timelimit}s)." if timeout else ".")
+    )
+
     if run_jetto.returncode == 0 and not timeout:
         # Create CDF files
         results = JettoResults(path=config_directory)
         profiles = results.load_profiles()
         timetraces = results.load_timetraces()
 
-        # Compress
-        compress_jetto_dir(config_directory)
+    # Compress
+    compress_jetto_dir(config_directory)
 
+    if run_jetto.returncode == 0 and not timeout:
         return profiles, timetraces
     else:
-        compress_jetto_dir(config_directory)
         return None, None
 
 
