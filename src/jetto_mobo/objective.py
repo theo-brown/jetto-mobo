@@ -30,7 +30,7 @@ def proximity_of_argmin_q_to_axis(profiles: Dataset, timetraces: Dataset):
     return 1 - timetraces["ROQM"][-1].data
 
 
-def q_increasing(profiles: Dataset, timetraces: Dataset):
+def q_increasing_area_weighted(profiles: Dataset, timetraces: Dataset):
     """Fraction of curve where q is increasing, weighted by area"""
     q = profiles["Q"][-1].data
     dq = np.gradient(q)
@@ -39,8 +39,45 @@ def q_increasing(profiles: Dataset, timetraces: Dataset):
     return increasing_q_area / (increasing_q_area + non_increasing_q_area)
 
 
-def dq_increasing(profiles: Dataset, timetraces: Dataset):
-    """Fraction of curve where dq is increasing, weighted by area"""
+def q_increasing_index_weighted(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where q is increasing, weighted by the number of locations"""
+    q = profiles["Q"][-1].data
+    dq = np.gradient(q)
+    return np.sum(dq > 0) / len(dq)
+
+
+def q_increasing_magntiude_weighted(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where q is increasing, weighted by the magnitude of the increase"""
+    q = profiles["Q"][-1].data
+
+    dq = np.gradient(q)
+    if np.all(dq > 0):
+        return 1  # Perfectly increasing
+    else:
+        # Find the indices where q is non-increasing
+        non_increasing_indices = np.where(dq <= 0)[0]
+
+    # Find the start and end indices of each non-increasing region
+    start_indices = [non_increasing_indices[0]]
+    end_indices = []
+    for i in range(1, len(non_increasing_indices)):
+        if non_increasing_indices[i] != non_increasing_indices[i - 1] + 1:
+            end_indices.append(non_increasing_indices[i - 1])
+            start_indices.append(non_increasing_indices[i])
+    end_indices.append(non_increasing_indices[-1])
+
+    # Compute the total change in q over each non-increasing region
+    total_change_in_q = 0
+    for start, end in zip(start_indices, end_indices):
+        # Compute the change in q over this region, and add it to the total
+        total_change_in_q += q[end] - q[start]
+
+    # Total change in q is negative, so this will be [0,1]
+    return np.exp(total_change_in_q)
+
+
+def dq_increasing_area_weighted(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where dq is increasing,  weighted by area"""
     dq = np.gradient(profiles["Q"][-1].data)
     ddq = np.gradient(dq)
     increasing_dq_area = np.sum(dq[ddq > 0])
@@ -48,6 +85,45 @@ def dq_increasing(profiles: Dataset, timetraces: Dataset):
     return increasing_dq_area / (increasing_dq_area + non_increasing_dq_area)
 
 
+def dq_increasing_index_weighted(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where dq is increasing,  weighted by the number of locations"""
+    dq = np.gradient(profiles["Q"][-1].data)
+    ddq = np.gradient(dq)
+    return np.sum(ddq > 0) / len(ddq)
+
+
+def dq_increasing_magnitude_weighted(profiles: Dataset, timetraces: Dataset):
+    """Fraction of curve where dq is increasing, weighted by the magnitude of the increase"""
+    q = profiles["Q"][-1].data
+
+    dq = np.gradient(q)
+    ddq = np.gradient(dq)
+    if np.all(ddq > 0):
+        return 1  # Perfectly increasing
+    else:
+        # Find the indices where dq is non-increasing
+        non_increasing_indices = np.where(ddq <= 0)[0]
+
+    # Find the start and end indices of each non-increasing region
+    start_indices = [non_increasing_indices[0]]
+    end_indices = []
+    for i in range(1, len(non_increasing_indices)):
+        if non_increasing_indices[i] != non_increasing_indices[i - 1] + 1:
+            end_indices.append(non_increasing_indices[i - 1])
+            start_indices.append(non_increasing_indices[i])
+    end_indices.append(non_increasing_indices[-1])
+
+    # Compute the total change in dq over each non-increasing region
+    total_change_in_dq = 0
+    for start, end in zip(start_indices, end_indices):
+        # Compute the change in q over this region, and add it to the total
+        total_change_in_dq += dq[end] - dq[start]
+
+    # Total change in q is negative, so this will be [0,1]
+    return np.exp(total_change_in_dq)
+
+
+# We can use this for a proxy for gradient at the given q value
 def rho_of_q_value(profiles: Dataset, timetraces: Dataset, value: float):
     """rho at first point where q>=value and r >= argmin(q)"""
     xrho = profiles["XRHO"][-1].data
@@ -94,10 +170,10 @@ def vector_objective(
     return np.array(
         [
             proximity_of_q0_to_qmin(profiles, timetraces),
-            proximity_of_qmin_to_target(profiles, timetraces, target=2.2),
+            proximity_of_qmin_to_target(profiles, timetraces, target=2),
             proximity_of_argmin_q_to_axis(profiles, timetraces),
-            q_increasing(profiles, timetraces),
-            dq_increasing(profiles, timetraces),
+            q_increasing_index_weighted(profiles, timetraces),
+            dq_increasing_index_weighted(profiles, timetraces),
             rho_of_q_value(profiles, timetraces, value=3),
             rho_of_q_value(profiles, timetraces, value=4),
         ]
@@ -111,4 +187,5 @@ def scalar_objective(
     if weights is None:
         return np.mean(v)
     else:
+        # TODO: softmax?
         return np.mean(weights * v)
