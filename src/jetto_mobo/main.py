@@ -12,7 +12,7 @@ from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 from botorch.acquisition.multi_objective.monte_carlo import (
     qNoisyExpectedHypervolumeImprovement,
 )
-from botorch.models import SingleTaskGP
+from botorch.models import MultiTaskGP, SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.optim import optimize_acqf
 from botorch.sampling.normal import SobolQMCNormalSampler
@@ -20,6 +20,7 @@ from botorch.utils.sampling import draw_sobol_samples
 from botorch.utils.transforms import normalize, unnormalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
+
 from jetto_mobo import ecrh, genetic_algorithm, objective, utils
 
 # TODO: Do we need to standardize the outputs?
@@ -47,6 +48,19 @@ parser.add_argument(
     type=int,
     default=5,
     help="Number of parallel JETTO runs (default: 5).",
+)
+parser.add_argument(
+    "--model",
+    type=str,
+    default="list",
+    choices=["list", "multitask"],
+    help="Model to use for Bayesian optimisation (default: 'list').",
+)
+parser.add_argument(
+    "--n_initial_points",
+    type=int,
+    default=10,
+    help="Number of initial points (default: 10).",
 )
 parser.add_argument(
     "--n_restarts",
@@ -207,7 +221,9 @@ elif args.ecrh_function == "sum_of_gaussians_fixed_means":
         min_variance=ecrh_function_config.get("min_variance", 1e-3),
         max_variance=ecrh_function_config.get("max_variance", 5e-2),
         spacing=ecrh_function_config.get("spacing", "log"),
-        variance_scaling=ecrh_function_config.get("variance_scaling", "log"),
+        variance_scaling=ecrh_function_config.get(
+            "variance_scaling", "log"
+        ),  # TODO test linear
     )
     xmax_lower_bound = ecrh_function_config.get("xmax_lower_bound", 0.1)
     xmax_upper_bound = ecrh_function_config.get("xmax_upper_bound", 0.9)
@@ -301,7 +317,7 @@ if args.resume:
 else:
     logger.info("Gathering initial data...")
     ecrh_parameters = draw_sobol_samples(
-        ecrh_parameter_bounds, n=1, q=args.batch_size
+        ecrh_parameter_bounds, n=1, q=args.n_initial_points
     ).squeeze()
     ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
     converged_ecrh, converged_q, value = ecrh.get_batch_value(
@@ -343,18 +359,28 @@ for i in np.arange(
     # Initialise surrogate model
     logger.info("Fitting surrogate model to observed values...")
     if args.value_function == "vector":
-        # TODO: check whether we should be using a list of single task GPs or a multi-task GP
-        # ModelListGP is a collection of SingleTaskGP that model each element of the vector objective independently
-        model = ModelListGP(
-            *[
-                SingleTaskGP(
-                    normalize(ecrh_parameters, ecrh_parameter_bounds),
-                    value[:, i].unsqueeze(1),
-                )
-                for i in range(n_objectives)
-            ]
-        )
-        mll = SumMarginalLogLikelihood(model.likelihood, model)
+        if args.model == "list":
+            # ModelListGP models each output independently
+            model = ModelListGP(
+                *[
+                    SingleTaskGP(
+                        normalize(ecrh_parameters, ecrh_parameter_bounds),
+                        value[:, i].unsqueeze(1),
+                    )
+                    for i in range(n_objectives)
+                ]
+            )
+            mll = SumMarginalLogLikelihood(model.likelihood, model)
+        elif args.model == "multitask":
+            # MultitaskGP models all outputs jointly
+            model = MultiTaskGP(
+                normalize(ecrh_parameters, ecrh_parameter_bounds),
+                value,
+                task_feature=-1,
+            )
+            mll = ExactMarginalLogLikelihood(model.likelihood, model)
+        else:
+            raise ValueError(f"Unknown model {args.model}.")
     else:
         model = SingleTaskGP(normalize(ecrh_parameters, ecrh_parameter_bounds), value)
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
