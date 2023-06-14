@@ -53,7 +53,7 @@ parser.add_argument(
     "--model",
     type=str,
     default="list",
-    choices=["list", "multitask"],
+    choices=["list", "joint"],
     help="Model to use for Bayesian optimisation (default: 'list').",
 )
 parser.add_argument(
@@ -121,7 +121,7 @@ parser.add_argument(
 parser.add_argument(
     "--reference_values",
     type=float,
-    nargs="?",
+    nargs="+",
     default=None,
     help="Reference value of objective function for each vector element.",
 )
@@ -371,12 +371,10 @@ for i in np.arange(
                 ]
             )
             mll = SumMarginalLogLikelihood(model.likelihood, model)
-        elif args.model == "multitask":
-            # MultitaskGP models all outputs jointly
-            model = MultiTaskGP(
+        elif args.model == "joint":
+            model = SingleTaskGP(
                 normalize(ecrh_parameters, ecrh_parameter_bounds),
                 value,
-                task_feature=-1,
             )
             mll = ExactMarginalLogLikelihood(model.likelihood, model)
         else:
