@@ -73,5 +73,6 @@ figure.update_layout(
     yaxis_range=[0, 1],
     template="simple_white",
     font_size=30,
+    margin={"l": 15, "r": 15, "t": 80, "b": 15},
 )
-figure.write_image("../images/pareto_front.svg", format="svg", width=600, height=500)
+figure.write_image("../images/pareto_front.svg", format="svg", width=600, height=420)

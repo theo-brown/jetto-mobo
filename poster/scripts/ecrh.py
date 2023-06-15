@@ -55,5 +55,6 @@ figure.update_layout(
     template="simple_white",
     font_size=30,
     showlegend=False,
+    margin={"l": 15, "r": 15, "t": 15, "b": 15},
 )
-figure.write_image("../images/ecrh_profiles.svg", format="svg", width=800, height=600)
+figure.write_image("../images/ecrh_profiles.svg", format="svg", width=710, height=495)
