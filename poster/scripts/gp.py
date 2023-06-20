@@ -104,7 +104,7 @@ figure.update_layout(
     yaxis_linewidth=3,
     margin={"l": 15, "r": 15, "t": 15, "b": 15},
 )
-figure.write_image("../images/gp.svg", width=350, height=250)
+figure.write_image("../images/gp.svg", width=600, height=205)
 
 figure = go.Figure(
     data=[
@@ -133,4 +133,4 @@ figure.add_vline(
     line_width=3,
     opacity=1,
 )
-figure.write_image("../images/acqf_plot.svg", width=350, height=125)
+figure.write_image("../images/acqf_plot.svg", width=600, height=205)
