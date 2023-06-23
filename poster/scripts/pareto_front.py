@@ -75,4 +75,4 @@ figure.update_layout(
     font_size=30,
     margin={"l": 15, "r": 15, "t": 80, "b": 15},
 )
-figure.write_image("../images/pareto_front.svg", format="svg", width=600, height=420)
+figure.write_image("../images/pareto_front.svg", format="svg", width=675, height=325)
