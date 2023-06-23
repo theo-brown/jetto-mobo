@@ -14,10 +14,10 @@ from jetto_mobo.old.utils import get_pareto_dominant_mask
 pio.kaleido.scope.mathjax = None
 
 # Load data from MOBO
-n_steps = 5
-batch_size = 5
+n_steps = 12
+batch_size = 30
 n_objectives = 7
-n_parameters = 12
+n_parameters = 11
 n_radial_points = 150
 
 parameters = np.zeros((n_steps * batch_size, n_parameters))
@@ -25,7 +25,7 @@ objective_values = np.zeros((n_steps * batch_size, n_objectives))
 converged_ecrh = np.zeros((n_steps * batch_size, 150))
 converged_q = np.zeros((n_steps * batch_size, 150))
 
-with h5py.File("../../data/mobo/ga_pl/bayesopt.hdf5") as hdf5:
+with h5py.File("../../data/mobo/joint/sog_fm_cpu/bayesopt.hdf5") as hdf5:
     for i in np.arange(n_steps):
         for j in np.arange(batch_size):
             if not np.any(np.isnan(hdf5[f"bayesopt/{i+1}/value"][j])):
@@ -41,14 +41,22 @@ with h5py.File("../../data/mobo/ga_pl/bayesopt.hdf5") as hdf5:
 # Get Pareto optimal solutions
 pareto_dominant_mask = get_pareto_dominant_mask(objective_values, allow_zero=False)
 
+# Get solutions where qmin > 2
+qmin_mask = np.min(converged_q, axis=1) >= 2
+
+# Get solutions where q0 < 5
+q0_mask = converged_q[:, 0] <= 5
+
 # Generate figure
 figure = make_subplots(
     rows=2,
     cols=2,
-    specs=[[{}, {"rowspan": 2, "type": "polar", "b": 0.1}], [{}, {}]],
+    specs=[[{"rowspan": 2, "type": "polar", "b": 0.1}, {}], [{}, {}]],
     horizontal_spacing=0.13,
     vertical_spacing=0.12,
 )
+
+mask = pareto_dominant_mask & qmin_mask & q0_mask
 
 
 def add_solution_to_figure(
@@ -112,33 +120,33 @@ def add_solution_to_figure(
             ),
         ],
         rows=[1, 1, 2, 2],
-        cols=[2, 1, 1, 1],
+        cols=[1, 2, 2, 2],
     )
 
 
 # Plot Bayesopt results
-solution_1 = np.nonzero(pareto_dominant_mask)[0][0]
-solution_5 = np.nonzero(pareto_dominant_mask)[0][4]
-solution_8 = np.nonzero(pareto_dominant_mask)[0][7]
+solution_0 = np.nonzero(mask)[0][0]
+solution_2 = np.nonzero(mask)[0][2]
+solution_4 = np.nonzero(mask)[0][4]
 add_solution_to_figure(
-    objective_values[solution_1],
-    converged_ecrh[solution_1],
-    converged_q[solution_1],
+    objective_values[solution_0],
+    converged_ecrh[solution_0],
+    converged_q[solution_0],
     name=f"Solution 1/8",
     colour=utils.colours[0],
 )
 add_solution_to_figure(
-    objective_values[solution_5],
-    converged_ecrh[solution_5],
-    converged_q[solution_5],
-    name=f"Solution 5/8",
+    objective_values[solution_2],
+    converged_ecrh[solution_2],
+    converged_q[solution_2],
+    name=f"Solution 3/8",
     colour=utils.colours[1],
 )
 add_solution_to_figure(
-    objective_values[solution_8],
-    converged_ecrh[solution_8],
-    converged_q[solution_8],
-    name=f"Solution 8/8",
+    objective_values[solution_4],
+    converged_ecrh[solution_4],
+    converged_q[solution_4],
+    name=f"Solution 5/8",
     colour=utils.colours[2],
 )
 
@@ -154,28 +162,28 @@ figure.update_layout(
     polar_angularaxis_showline=False,
     polar_angularaxis_gridcolor="grey",
     legend_orientation="h",
-    legend_x=0,
+    legend_x=1,
     legend_y=1,
-    legend_xanchor="left",
+    legend_xanchor="right",
     legend_yanchor="bottom",
-    margin={"l": 20, "r": 110, "b": 20, "t": 20, "pad": 0},
+    margin={"l": 110, "r": 20, "b": 20, "t": 20, "pad": 0},
     font_size=22,
 )
 figure.add_annotation(
     text="Vector objective values",
     xref="paper",
     yref="paper",
-    x=0.93,
+    x=0.15,
     y=-0.17,
     showarrow=False,
     font_size=26,
 )
-figure.update_yaxes(title="QECE [W]", row=1, col=1, linewidth=3)
-figure.update_yaxes(range=[1.8, None], title="Safety factor", row=2, col=1, linewidth=3)
-figure.update_xaxes(title="Normalised radius", row=2, col=1, range=[0, 1], linewidth=3)
-figure.update_xaxes(row=1, col=2, linewidth=3)
+figure.update_yaxes(title="QECE [W]", row=1, col=2, linewidth=3)
+figure.update_yaxes(range=[1.8, None], title="Safety factor", row=2, col=2, linewidth=3)
+figure.update_xaxes(title="Normalised radius", row=2, col=2, range=[0, 1], linewidth=3)
+figure.update_xaxes(row=1, col=2, range=[0, 1], linewidth=3)
 figure.write_image(
-    "../images/mobo_old.svg",
+    "../images/mobo_new.svg",
     width=1280,
     height=600,
 )
