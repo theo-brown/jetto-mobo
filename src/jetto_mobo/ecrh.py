@@ -172,6 +172,22 @@ def sum_of_gaussians_fixed_means(
     )
 
 
+def sum_of_gaussians_general(x: np.ndarray, parameters: np.ndarray):
+    means = parameters[0::3]
+    log_variances = parameters[1::3]
+    amplitudes = parameters[2::3]
+
+    variances = np.exp(log_variances)
+
+    return np.sum(
+        [
+            _gaussian(x, mean=means[i], variance=variances[i], amplitude=amplitudes[i])
+            for i in range(len(parameters) // 3)
+        ],
+        axis=0,
+    )
+
+
 def create_config(
     template_directory: str,
     config_directory: str,
