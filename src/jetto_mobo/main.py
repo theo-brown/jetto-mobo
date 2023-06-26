@@ -378,8 +378,8 @@ for i in np.arange(
 
     # Initialise surrogate model
     logger.info("Fitting surrogate model to observed values...")
-    if args.value_function == "vector":
-        if args.model == "list":
+    if args.model == "list":
+        if args.value_function == "vector" or args.value_function == "ga_vector":
             # ModelListGP models each output independently
             model = ModelListGP(
                 *[
@@ -391,15 +391,13 @@ for i in np.arange(
                 ]
             )
             mll = SumMarginalLogLikelihood(model.likelihood, model)
-        elif args.model == "joint":
-            model = SingleTaskGP(
-                normalize(ecrh_parameters, ecrh_parameter_bounds),
-                value,
-            )
-            mll = ExactMarginalLogLikelihood(model.likelihood, model)
         else:
-            raise ValueError(f"Unknown model {args.model}.")
+            raise ValueError(
+                f"Model type was {args.model} but value function is {args.value_function}."
+            )
     else:
+        # SingleTaskGP models all outputs jointly
+        # It works for both scalar and vector cases
         model = SingleTaskGP(normalize(ecrh_parameters, ecrh_parameter_bounds), value)
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
     fit_gpytorch_mll(mll)
