@@ -69,6 +69,12 @@ parser.add_argument(
     help="Number of points for multistart optimisation (default: 10).",
 )
 parser.add_argument(
+    "--alpha",
+    type=float,
+    default=0,
+    help="Alpha parameter for qNEHVI (default: 0).",
+)
+parser.add_argument(
     "--raw_samples",
     type=int,
     default=512,
@@ -157,6 +163,8 @@ file_attrs = [
     "n_restarts",
     "raw_samples",
     "n_sobol_samples",
+    "acqf_optimisation_mode",
+    "alpha",
     "ecrh_function",
     "ecrh_function_config",
     "value_function",
@@ -412,12 +420,13 @@ for i in np.arange(
     # (low-discrepancy = on average, samples are evenly distributed to cover the space)
     # BoTorch recommends using Sobol because it produces lower variance gradient estimates
     # with much fewer samples [https://botorch.org/docs/samplers]
-    if args.value_function == "vector":
+    if args.value_function == "vector" or args.value_function == "ga_vector":
         acquisition_function = qNoisyExpectedHypervolumeImprovement(
             model=model,
             ref_point=reference_values,
             X_baseline=normalize(ecrh_parameters, ecrh_parameter_bounds),
             prune_baseline=True,
+            alpha=args.alpha,
             sampler=SobolQMCNormalSampler(
                 sample_shape=torch.Size([args.n_sobol_samples])
             ),
