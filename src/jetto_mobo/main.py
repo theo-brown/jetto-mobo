@@ -316,23 +316,22 @@ if args.resume:
         )
 else:
     logger.info("Gathering initial data...")
-    ecrh_parameters = draw_sobol_samples(
-        ecrh_parameter_bounds, n=1, q=args.n_initial_points
-    ).squeeze()
-    ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
-    converged_ecrh, converged_q, value = ecrh.get_batch_value(
-        ecrh_parameters=ecrh_parameters_numpy,
-        batch_directory=f"{args.output_dir}/initialisation",
-        ecrh_function=ecrh_function,
-        value_function=value_function,
-        timelimit=args.jetto_timelimit,
-        jetto_template=f"jetto/templates/{args.jetto_template}",
-    )
-    if np.all(np.isnan(value)):
-        # TODO: retry rather than exit
-        raise RuntimeError(
-            "Failed to generate initial values; all initial points failed to converge."
+    initialisation_complete = False
+    while not initialisation_complete:
+        ecrh_parameters = draw_sobol_samples(
+            ecrh_parameter_bounds, n=1, q=args.n_initial_points
+        ).squeeze()
+        ecrh_parameters_numpy = ecrh_parameters.detach().cpu().numpy()
+        converged_ecrh, converged_q, value = ecrh.get_batch_value(
+            ecrh_parameters=ecrh_parameters_numpy,
+            batch_directory=f"{args.output_dir}/initialisation",
+            ecrh_function=ecrh_function,
+            value_function=value_function,
+            timelimit=args.jetto_timelimit,
+            jetto_template=f"jetto/templates/{args.jetto_template}",
         )
+        if not np.all(np.isnan(value)):
+            initialisation_complete = True
 
     with h5py.File(output_file, "a") as f:
         f["initialisation/ecrh_parameters"] = ecrh_parameters_numpy
@@ -458,7 +457,6 @@ for i in np.arange(
 
     # Observe values
     logger.info("Calculating value of candidate points...")
-    # TODO: handle if new_value are all Nones
     converged_ecrh, converged_q, new_value = ecrh.get_batch_value(
         ecrh_parameters=new_ecrh_parameters.cpu().numpy(),
         batch_directory=f"{args.output_dir}/bayesopt/{i}",
@@ -466,6 +464,7 @@ for i in np.arange(
         value_function=value_function,
         timelimit=args.jetto_timelimit,
         jetto_template=f"jetto/templates/{args.jetto_template}",
+        n_objectives=n_objectives,
     )
 
     # Update logged data
