@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%labels
+version="1.0"
+description="This is a Singularity image based on Joseph Parker's Docker image for running GS2 with GNU compilers on Ubuntu 20.04. This uses MPICH instead of OpenMPI to avoid issues with running as root."
+
+%post
+export DEBIAN_FRONTEND=noninteractive
+export TZ=Europe/London
+export GK_SYSTEM=gnu_ubuntu
+
+apt update \
+&& apt install -y \
+gfortran \
+g++ \
+make \
+wget \
+git \
+vim \
+cmake \
+rsync \
+curl \
+python3 \
+python3.8-venv \
+python3-pip \
+mpich \
+libnetcdf-dev \
+libnetcdff-dev \
+libfftw3-dev \
+python-is-python3
+
+echo 'alias python=python3' >> $HOME/.bashrc
+echo 'alias pip=pip3' >> $HOME/.bashrc
+echo 'export GK_SYSTEM=gnu_ubuntu' >> $HOME/.bashrc
+
+pip install ford
+
+git clone https://whornsby@bitbucket.org/gyrokinetics/gs2.git /gs2
+cd /gs2
+make -IMakefiles
+
+%environment
+export GK_SYSTEM=gnu_ubuntu
+export PATH=/gs2/bin:$PATH
