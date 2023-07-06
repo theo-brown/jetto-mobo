@@ -33,9 +33,11 @@ def proximity_of_argmin_q_to_axis(profiles: Dataset, timetraces: Dataset):
 def q_increasing_area_weighted(profiles: Dataset, timetraces: Dataset):
     """Fraction of curve where q is increasing, weighted by area"""
     q = profiles["Q"][-1].data
-    dq = np.gradient(q)
-    increasing_q_area = np.sum(q[dq > 0])
-    non_increasing_q_area = np.sum(q[dq <= 0])
+    # Shift q so that area is guaranteed to be positive
+    shifted_q = q - np.min(q)
+    dq = np.gradient(shifted_q)
+    increasing_q_area = np.sum(shifted_q[dq > 0])
+    non_increasing_q_area = np.sum(shifted_q[dq <= 0])
     return increasing_q_area / (increasing_q_area + non_increasing_q_area)
 
 
@@ -79,9 +81,11 @@ def q_increasing_magntiude_weighted(profiles: Dataset, timetraces: Dataset):
 def dq_increasing_area_weighted(profiles: Dataset, timetraces: Dataset):
     """Fraction of curve where dq is increasing,  weighted by area"""
     dq = np.gradient(profiles["Q"][-1].data)
-    ddq = np.gradient(dq)
-    increasing_dq_area = np.sum(dq[ddq > 0])
-    non_increasing_dq_area = np.sum(dq[ddq <= 0])
+    # Shift dq so that area is guaranteed to be positive
+    shifted_dq = dq - np.min(dq)
+    ddq = np.gradient(shifted_dq)
+    increasing_dq_area = np.sum(shifted_dq[ddq > 0])
+    non_increasing_dq_area = np.sum(shifted_dq[ddq <= 0])
     return increasing_dq_area / (increasing_dq_area + non_increasing_dq_area)
 
 
