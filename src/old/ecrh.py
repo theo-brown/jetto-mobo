@@ -197,6 +197,22 @@ def sum_of_gaussians_fixed_means(
     )
 
 
+def sum_of_gaussians_general(x: np.ndarray, parameters: np.ndarray):
+    means = parameters[0::3]
+    log_variances = parameters[1::3]
+    amplitudes = parameters[2::3]
+
+    variances = np.exp(log_variances)
+
+    return np.sum(
+        [
+            _gaussian(x, mean=means[i], variance=variances[i], amplitude=amplitudes[i])
+            for i in range(len(parameters) // 3)
+        ],
+        axis=0,
+    )
+
+
 def create_config(
     template_directory: str,
     config_directory: str,
@@ -240,6 +256,7 @@ def get_batch_value(
     timelimit: Optional[int] = None,
     jetto_template: str = "jetto/templates/spr45",
     jetto_image: str = "jetto/images/sim.v220922.sif",
+    n_objectives: int = 1,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute the given value function for each element in a batch array of ECRH parameters.
 
@@ -261,6 +278,8 @@ def get_batch_value(
         Directory of JETTO template run, used as a base to create the new JETTO configurations.
     jetto_image : str, default "jetto/images/sim.v220922.sif"
         Path to the JETTO .sif Singularity container image.
+    n_objectives : int, default 1
+        Number of objective objective_values returned by `value_function`.
 
     Returns
     -------
@@ -290,9 +309,9 @@ def get_batch_value(
     )
 
     # Parse outputs
-    converged_inputs = []
-    converged_outputs = []
-    values = []
+    converged_ecrh = []
+    converged_q = []
+    objective_values = []
     for i, (profiles, timetraces) in enumerate(batch_output):
         if profiles is not None:
             # Load data
@@ -300,16 +319,16 @@ def get_batch_value(
             profiles = results.load_profiles()
             timetraces = results.load_timetraces()
             # Save to arrays
-            converged_inputs.append(profiles["QECE"][-1])
-            converged_outputs.append(profiles["Q"][-1])
-            values.append(np.atleast_1d(value_function(profiles, timetraces)))
+            converged_ecrh.append(profiles["QECE"][-1])
+            converged_q.append(profiles["Q"][-1])
+            objective_values.append(np.atleast_1d(value_function(profiles, timetraces)))
         else:
-            converged_inputs.append([None])
-            converged_outputs.append([None])
-            values.append([None])
+            converged_ecrh.append([None] * 150) # TODO: remove hardcoding of number of points
+            converged_q.append([None] * 150)
+            objective_values.append([None] * n_objectives)
 
     return (
-        utils.pad_1d(converged_inputs),
-        utils.pad_1d(converged_outputs),
-        utils.pad_1d(values),
+        utils.pad_1d(converged_ecrh),
+        utils.pad_1d(converged_q),
+        utils.pad_1d(objective_values),
     )
