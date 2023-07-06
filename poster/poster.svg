@@ -2879,9 +2879,9 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      showgrid="false"
-     inkscape:zoom="0.26432953"
-     inkscape:cx="1785.6499"
-     inkscape:cy="1626.7573"
+     inkscape:zoom="1.28"
+     inkscape:cx="411.71875"
+     inkscape:cy="4300.7813"
      inkscape:window-width="1920"
      inkscape:window-height="1022"
      inkscape:window-x="0"
@@ -2889,19 +2889,19 @@
      inkscape:window-maximized="1"
      inkscape:current-layer="g1400"
      inkscape:snap-bbox="true"
-     inkscape:bbox-paths="true"
-     inkscape:snap-page="false"
+     inkscape:bbox-paths="false"
+     inkscape:snap-page="true"
      inkscape:bbox-nodes="true"
-     inkscape:snap-text-baseline="true"
+     inkscape:snap-text-baseline="false"
      inkscape:snap-global="true"
      showguides="true"
-     inkscape:snap-nodes="false"
+     inkscape:snap-nodes="true"
      inkscape:snap-others="false"
-     inkscape:snap-bbox-midpoints="false"
-     inkscape:snap-bbox-edge-midpoints="false"
-     inkscape:snap-grids="true"
+     inkscape:snap-bbox-midpoints="true"
+     inkscape:snap-bbox-edge-midpoints="true"
+     inkscape:snap-grids="false"
      inkscape:snap-midpoints="false"
-     inkscape:snap-center="true"
+     inkscape:snap-center="false"
      inkscape:snap-to-guides="true"
      inkscape:snap-object-midpoints="false"
      inkscape:object-paths="false"
@@ -3044,11 +3044,59 @@
 </g>
 </g></g></g><path
    style="fill:#143451;fill-opacity:1;stroke:none;stroke-width:0.75px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-   d="m 1903.068,3370.62 h 483.334 l 0.029,-483.364 z"
-   id="path1548" /><path
-   style="fill:#143451;fill-opacity:1;stroke:none;stroke-width:0.75px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-   d="M 2386.375,94.98903 2386.261,-0.65195 2.182,0.028 -0.283,302.96606 2386.375,94.98903"
-   id="path1762" /><g
+   d="m 1903.068,3370.6205 h 481.1808 v -482.9872 z"
+   id="path1548"
+   sodipodi:nodetypes="cccc" /><path
+   style="fill:#143451;fill-opacity:1;stroke:none;stroke-width:0.745569px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+   d="M 2384.2488,-3.3398438e-5 H 0 V 300.23056 L 2384.2488,94.495462"
+   id="path1762"
+   sodipodi:nodetypes="cccc" /><text
+   xml:space="preserve"
+   style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;line-height:0;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+   x="43.155804"
+   y="-222.72092"
+   id="text28246-1-3"
+   transform="scale(1,-1)"><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-222.72092"
+     id="tspan58534-59-4">References:</tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-206.72092"
+     id="tspan282664">[1] Romanelli et al. &quot;JINTRAC: A System of Codes for Integrated Simulation of </tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-190.72092"
+     id="tspan315148">     Tokamak Scenarios&quot;, Plasma and Fusion Research 9 (2014).</tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-174.72092"
+     id="tspan139214">[2] Marsden et al. &quot;Using Genetic Algorithms to Optimise Current Drive in STEP&quot;, </tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-158.72092"
+     id="tspan316446">     48th European Conference on Plasma Physics (2022).</tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-142.72092"
+     id="tspan129936">[3] Menard et al. &quot;Aspect Ratio Scaling of Ideal No-wall Stability Limits in High </tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-126.72092"
+     id="tspan317888">     Bootstrap Fraction Tokamak Plasmas&quot;, Physics of Plasmas 11.2 (2004).</tspan><tspan
+     sodipodi:role="line"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
+     x="43.155804"
+     y="-118.72092"
+     id="tspan80763" /></text><g
    id="g2047"
    transform="matrix(0.1,0,0,0.1,0,2528.6205)" /><g
    id="g1201"
@@ -3079,23 +3127,7 @@
 
 
 
-<text
-   xml:space="preserve"
-   style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:18px;line-height:1.25;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-   x="563.90076"
-   y="105.76237"
-   id="text28246-6"
-   transform="scale(1,-1)"><tspan
-     sodipodi:role="line"
-     id="tspan28244-3"
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-     x="563.90076"
-     y="105.76237">The UK Atomic Energy Authority’s mission is to lead the commercial development of fusion</tspan><tspan
-     sodipodi:role="line"
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-     x="563.90076"
-     y="128.26237"
-     id="tspan58534-8">power and related technology, and position the UK as a leader in sustainable nuclear energy </tspan></text>
+
 
 
 
@@ -3211,14 +3243,14 @@
    transform="matrix(0.1,0,0,0.1,0,2528.6205)" /><text
    xml:space="preserve"
    style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:18px;line-height:0;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-   x="44.683781"
-   y="-141.90854"
+   x="1282.4634"
+   y="-58.954144"
    id="text28246-1"
    transform="scale(1,-1)"><tspan
      sodipodi:role="line"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;line-height:1;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-     x="44.683781"
-     y="-141.90854"
+     x="1282.4634"
+     y="-58.954144"
      id="tspan58534-59">This project was funded by the UKAEA/STFC FARSCAPE programme</tspan></text>
 
 
@@ -3322,7 +3354,9 @@
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
      y="-2681.25"
      x="112.5"
-     sodipodi:role="line">JETTO is a high-fidelity plasma modelling code that solves coupled core transport and equilibrium equations.</tspan><tspan
+     sodipodi:role="line">JETTO is a high-fidelity plasma modelling code that solves coupled core transport and equilibrium equations<tspan
+   style="font-size:65%;baseline-shift:super"
+   id="tspan346984">[1]</tspan>.</tspan><tspan
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
      y="-2651.25"
      x="112.5"
@@ -3511,9 +3545,11 @@
      sodipodi:role="line"
      x="112.5"
      y="-2441.25"
-     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75">As a result, BO exhibits <tspan
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75">As a result, BO gives <tspan
    id="tspan2204"
-   style="font-weight:bold">vastly improved performance</tspan> compared to stochastic search methods.</tspan><tspan
+   style="font-weight:bold">vastly improved performance</tspan> compared to stochastic search methods<tspan
+   style="font-size:65%;baseline-shift:super"
+   id="tspan244790">[2]</tspan>.</tspan><tspan
      id="tspan2178"
      sodipodi:role="line"
      x="112.5"
@@ -3745,13 +3781,7 @@
      transform="translate(15.229728,-22.452464)"
      id="g3137" /><g
      id="g203054"
-     transform="matrix(0.75000002,0,0,-0.75000002,1871.062,1937.9473)"><rect
-       x="-3.6689882"
-       y="12.495282"
-       width="674.99994"
-       height="300"
-       style="fill:#ffffff;fill-opacity:1"
-       id="rect202761" /><g
+     transform="matrix(0.75000002,0,0,-0.75000002,1871.062,1937.9473)"><g
        class="bglayer"
        id="g202782" /><g
        class="layer-below"
@@ -3989,26 +4019,7 @@
        class="infolayer"
        id="g202951"><g
          class="g-gtitle"
-         id="g202941" /><g
-         class="g-xtitle"
-         id="g202945"
-         transform="translate(0,266)"><text
-           class="xtitle"
-           x="358.5"
-           y="38.700001"
-           text-anchor="middle"
-           style="font-weight:normal;font-size:36px;font-family:'Open Sans', verdana, arial, sans-serif;white-space:pre;opacity:1;fill:#242424"
-           id="text202943">Objective 1</text></g><g
-         class="g-ytitle"
-         transform="translate(76.700195)"
-         id="g202949"><text
-           class="ytitle"
-           transform="rotate(-90,-38.7,174)"
-           x="-38.700001"
-           y="174"
-           text-anchor="middle"
-           style="font-weight:normal;font-size:36px;font-family:'Open Sans', verdana, arial, sans-serif;white-space:pre;opacity:1;fill:#242424"
-           id="text202947">Objective 2</text></g></g></g><g
+         id="g202941" /></g></g><g
      id="g3573"
      transform="translate(67.065926,-16.103885)"><text
    transform="scale(1,-1)"
@@ -4152,7 +4163,9 @@
      y="-2576.25"
      x="112.5"
      sodipodi:role="line"
-     id="tspan3165-6">Previously, the ECRH profile has been represented as a piecewise linear function (Fig. 5), with </tspan><tspan
+     id="tspan3165-6">Previously, the ECRH profile has been represented as a piecewise linear function<tspan
+   style="font-size:65%;baseline-shift:super"
+   id="tspan211442">[2]</tspan> (Fig. 5), with </tspan><tspan
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
      y="-2546.25"
      x="112.5"
@@ -4369,7 +4382,7 @@
    id="path11053"
    d="m 13778,9876 h 10377 v 2388 H 13778 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11061"
    class="TextShape"><tspan
@@ -4391,7 +4404,7 @@
    id="path11063"
    d="m 24155,9876 h 9992 v 2388 h -9992 z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11073"
    class="TextShape"><tspan
@@ -4415,12 +4428,12 @@
    id="path11075"
    d="m 34147,9876 h 11353 v 2388 H 34147 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <path
    id="path11077"
    d="m 13778,12264 h 10377 v 2388 H 13778 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11085"
    class="TextShape"><tspan
@@ -4442,7 +4455,7 @@
    id="path11087"
    d="m 24155,12264 h 9992 v 2388 h -9992 z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11097"
    class="TextShape"><tspan
@@ -4450,15 +4463,13 @@
      font-weight="400"
      font-size="847px"
      class="TextParagraph"
-     style="font-weight:400;font-size:847px;font-family:Arial, sans-serif"><tspan
-       id="tspan11093"
-       y="13752"
-       x="27259"
-       class="TextPosition"><tspan
-         id="tspan11089"
-         style="fill:#000000;stroke:none">Improve </tspan><tspan
-         id="tspan11091"
-         style="fill:#000000;stroke:none">β</tspan></tspan></tspan></text>
+     style="font-weight:400;font-size:847px;font-family:Arial, sans-serif">Mi<tspan
+   id="tspan11093"
+   y="13752"
+   x="27259"
+   class="TextPosition"><tspan
+     id="tspan11089"
+     style="fill:#000000;stroke:none" /></tspan></tspan></text>
 
 
 
@@ -4466,12 +4477,12 @@
    id="path11099"
    d="m 34147,12264 h 11353 v 2388 H 34147 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <path
    id="path11101"
    d="m 13778,14652 h 10377 v 2388 H 13778 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11111"
    class="TextShape"><tspan
@@ -4496,23 +4507,23 @@
    id="path11113"
    d="m 24155,14652 h 9992 v 2388 h -9992 z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11123"
-   class="TextShape"><tspan
+   class="TextShape"
+   x="-1203.3962"
+   y="-79.975342"><tspan
      id="tspan11121"
      font-weight="400"
      font-size="847px"
      class="TextParagraph"
      style="font-weight:400;font-size:847px;font-family:Arial, sans-serif"><tspan
        id="tspan11119"
-       y="16140"
-       x="27259"
+       y="16060.024"
+       x="26055.604"
        class="TextPosition"><tspan
          id="tspan11115"
-         style="fill:#000000;stroke:none">Improve </tspan><tspan
-         id="tspan11117"
-         style="fill:#000000;stroke:none">β</tspan></tspan></tspan></text>
+         style="fill:#000000;stroke:none">Improve stability</tspan></tspan></tspan></text>
 
 
 
@@ -4520,12 +4531,12 @@
    id="path11125"
    d="m 34147,14652 h 11353 v 2388 H 34147 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <path
    id="path11127"
    d="m 13778,17040 h 10377 v 2388 H 13778 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11139"
    class="TextShape"><tspan
@@ -4552,7 +4563,7 @@
    id="path11141"
    d="m 24155,17040 h 9992 v 2388 h -9992 z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11149"
    class="TextShape"><tspan
@@ -4574,12 +4585,12 @@
    id="path11151"
    d="m 34147,17040 h 11353 v 2388 H 34147 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <path
    id="path11153"
    d="m 13778,19428 h 10377 v 2387 H 13778 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11163"
    class="TextShape"><tspan
@@ -4604,7 +4615,7 @@
    id="path11165"
    d="m 24155,19428 h 9992 v 2387 h -9992 z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         <text
    id="text11173"
    class="TextShape"><tspan
@@ -4626,7 +4637,7 @@
    id="path11175"
    d="m 34147,19428 h 11353 v 2387 H 34147 Z"
    inkscape:connector-curvature="0"
-   style="fill:#c3d9ef;fill-opacity:1;stroke:none" />
+   style="fill:#d7e4f1;fill-opacity:0.23518802;stroke:none" />
         
         <path
    id="path11179"
@@ -4690,7 +4701,7 @@
  </g></g><g
        id="g11661"
        clip-path="url(#EnHeLQpEZKpb)"
-       transform="matrix(0.75000002,0,0,-0.75000002,1900.4063,1339.3988)"><g
+       transform="matrix(0.75000002,0,0,-0.75000002,1904.3965,1333.6836)"><g
          id="g11659"
          transform="translate(-70,-258)"><path
            id="path11591"
@@ -4851,7 +4862,7 @@
 </g></g></g></g><g
        id="g11782"
        clip-path="url(#WTNlUmgaZszE)"
-       transform="matrix(0.75000002,0,0,-0.75000002,2086.0138,1336.4325)"><g
+       transform="matrix(0.75000002,0,0,-0.75000002,2092.9176,1331.5836)"><g
          id="g11780"
          transform="translate(-70,-258)"><path
            id="path11712"
@@ -5030,7 +5041,7 @@
 </g></g></g></g><g
        id="g12447"
        clip-path="url(#kGAIuadGLFDR)"
-       transform="matrix(0.75000002,0,0,-0.75000002,1931.25,1276.5)"><g
+       transform="matrix(0.75000002,0,0,-0.75000002,1948.2715,1262.9923)"><g
          id="g12445"
          transform="translate(-70,-258)"><path
            id="path12365"
@@ -5209,7 +5220,7 @@
 </g></g></g></g><g
        id="g12626"
        clip-path="url(#qmqEwegHQPhT)"
-       transform="matrix(0.75000002,0,0,-0.75000002,1909.3319,1155.9813)"><g
+       transform="matrix(0.55714287,0,0,-0.55714287,1959.1465,1137.8018)"><g
          id="g12624"
          transform="translate(-70,-258)"><path
            id="path12504"
@@ -5472,7 +5483,7 @@
 </g></g></g></g><g
        id="g12803"
        clip-path="url(#xOmkxVAWWvSx)"
-       transform="matrix(0.75000002,0,0,-0.75000002,1929.9964,1223.95)"><g
+       transform="matrix(0.62903227,0,0,-0.62903227,1959.1465,1208.9857)"><g
          id="g12801"
          transform="translate(-70,-258)"><path
            id="path12703"
@@ -5699,7 +5710,7 @@
 </g></g></g></g><g
        id="g12943"
        clip-path="url(#NLBMWCeHAlKC)"
-       transform="matrix(0.75000002,0,0,-0.75000002,1964.1027,1068.7639)"><g
+       transform="matrix(0.75000002,0,0,-0.75000002,1970.3965,1061.4246)"><g
          id="g12941"
          transform="translate(-70,-258)"><path
            id="path12869"
@@ -5874,7 +5885,9 @@
        x="112.50008"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:36px;font-family:Arial;-inkscape-font-specification:'Arial Bold';stroke-width:0.75"
        id="tspan992237-1-0"
-       sodipodi:role="line">Target metrics for safety factor profile</tspan></text></g>
+       sodipodi:role="line">Target metrics for safety factor profile<tspan
+   style="font-weight:normal;font-size:65%;baseline-shift:super"
+   id="tspan188938">[2,3]</tspan></tspan></text></g>
 
 
 <text
@@ -6464,23 +6477,23 @@
 
 </g></g></g></g><g
    id="g1262-8-1-5"
-   transform="translate(782.28459,-2738.511)"><text
+   transform="translate(1383.7846,-2642.5109)"><text
    transform="scale(1,-1)"
    id="text1204-6-1-2"
-   y="-2796.8853"
-   x="663.4342"
+   y="-2779.7083"
+   x="704.45923"
    style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.75"
    xml:space="preserve"><tspan
-     style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;fill:#ffffff;fill-opacity:1;stroke-width:0.75"
-     y="-2796.8853"
-     x="663.4342"
+     style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;fill:#000000;fill-opacity:1;stroke-width:0.75"
+     y="-2779.7083"
+     x="704.45923"
      sodipodi:role="line"
      id="tspan18884">Contact: tab3@cam.ac.uk</tspan></text>
 
 
 </g><g
    id="g14729"
-   transform="matrix(0.75000002,0,0,-0.75000002,1792.1313,1493.4355)"><rect
+   transform="matrix(0.75000002,0,0,-0.75000002,1792.1313,1458.9355)"><rect
      id="rect14266"
      style="fill:#ffffff;fill-opacity:1"
      height="495"
@@ -6964,7 +6977,7 @@
        transform="translate(74.210216,-655.00342)"
        class="g-ytitle" /></g></g><g
    id="g15095"
-   transform="matrix(0.75000002,0,0,-0.75000002,72.270633,1492.8193)"><rect
+   transform="matrix(0.75000002,0,0,-0.75000002,72.270633,1458.3193)"><rect
      id="rect14731"
      style="fill:#ffffff;fill-opacity:1"
      height="495"
@@ -7649,14 +7662,14 @@
          id="text54923">ACQF</text></g></g></g><text
    xml:space="preserve"
    style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:18px;line-height:0.76;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-   x="41.738281"
-   y="-208.97592"
+   x="900.13483"
+   y="-118.95352"
    id="text28246-61-6"
    transform="scale(1,-1)"><tspan
      sodipodi:role="line"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:28px;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.75"
-     x="41.738281"
-     y="-208.97592"
+     x="900.13483"
+     y="-118.95352"
      id="tspan70693-5">STEP OPEN</tspan></text><g
    id="g1262-8"
    transform="translate(-18.750044,-1766.8795)"><rect
@@ -7720,7 +7733,9 @@
      y="-2546.25"
      x="112.5"
      sodipodi:role="line"
-     id="tspan253189">decreasing ECRH, as previous optimisation methods failed to find good double-peaked solutions.</tspan><tspan
+     id="tspan253189">decreasing ECRH, as previous optimisation methods<tspan
+   style="font-size:65%;baseline-shift:super"
+   id="tspan228388">[1]</tspan> failed to find good double-peaked solutions.</tspan><tspan
      y="-2527.0591"
      x="112.5"
      sodipodi:role="line"
@@ -7782,7 +7797,7 @@
        y="-2591.25"
        x="112.5"
        sodipodi:role="line"
-       id="tspan253189-4"></tspan><tspan
+       id="tspan253189-4" /><tspan
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:24px;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
        y="-2561.25"
        x="112.5"
@@ -8742,27 +8757,27 @@
            id="path385308" /><path
            class="angularaxisgrid"
            d="M 939.015,261 1068.0774,99.160883"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path385310" /><path
            class="angularaxisgrid"
            d="M 939.015,261 892.95317,59.189922"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385312" /><path
            class="angularaxisgrid"
            d="M 939.015,261 752.51444,171.18607"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385314" /><path
            class="angularaxisgrid"
            d="M 939.015,261 752.51444,350.81393"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385316" /><path
            class="angularaxisgrid"
            d="M 939.015,261 892.95317,462.81008"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385318" /><path
            class="angularaxisgrid"
            d="m 939.015,261 129.0624,161.83912"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385320" /></g><g
          class="polarsublayer radial-grid"
          transform="translate(939.015,261)"
@@ -8770,23 +8785,23 @@
          id="g385334"><path
            class="xgrid"
            d="M 40.99,0 A 40.99,40.99 0 1 0 -40.99,0 40.99,40.99 0 1 0 40.99,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385324" /><path
            class="xgrid"
            d="M 81.98,0 A 81.98,81.98 0 1 0 -81.98,0 81.98,81.98 0 1 0 81.98,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385326" /><path
            class="xgrid"
            d="M 122.97,0 A 122.97,122.97 0 1 0 -122.97,0 122.97,122.97 0 1 0 122.97,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385328" /><path
            class="xgrid"
            d="M 163.96,0 A 163.96,163.96 0 1 0 -163.96,0 163.96,163.96 0 1 0 163.96,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385330" /><path
            class="xgrid"
            d="m 204.95,0 a 204.95,204.95 0 1 0 -409.9,0 204.95,204.95 0 1 0 409.9,0 z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
            id="path385332" /></g><g
          class="polarsublayer frontplot"
          transform="translate(732.015,54)"
@@ -8808,7 +8823,7 @@
                  class="js-line"
                  d="M 230.84,207 332.79,49.27 172.53,55.97 48.48,130.66 31.73,291.41 184.27,306.57 285.21,305.07 230.84,207"
                  clip-path="url(#clip3a2b1fpolar-for-traces)"
-                 style="opacity:1;vector-effect:non-scaling-stroke;fill:none;stroke:#3366cc;stroke-width:3px;stroke-opacity:1"
+                 style="opacity:1;fill:none;stroke:#93979f;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:3.81818175;stroke-dasharray:none"
                  id="path385342" /></g><g
                class="points"
                id="g385362"><path
@@ -10184,27 +10199,27 @@
            id="path601393" /><path
            class="angularaxisgrid"
            d="M 360.125,261 489.18739,99.160883"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601395" /><path
            class="angularaxisgrid"
            d="M 360.125,261 314.06317,59.189922"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601397" /><path
            class="angularaxisgrid"
            d="M 360.125,261 173.62444,171.18607"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601399" /><path
            class="angularaxisgrid"
            d="M 360.125,261 173.62444,350.81393"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601401" /><path
            class="angularaxisgrid"
            d="M 360.125,261 314.06317,462.81008"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601403" /><path
            class="angularaxisgrid"
            d="M 360.125,261 489.18739,422.83912"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601405" /></g><g
          class="polarsublayer radial-grid"
          transform="translate(360.125,261)"
@@ -10212,23 +10227,23 @@
          id="g601419"><path
            class="xgrid"
            d="M 40.99,0 A 40.99,40.99 0 1 0 -40.99,0 40.99,40.99 0 1 0 40.99,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601409" /><path
            class="xgrid"
            d="M 81.98,0 A 81.98,81.98 0 1 0 -81.98,0 81.98,81.98 0 1 0 81.98,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601411" /><path
            class="xgrid"
            d="M 122.97,0 A 122.97,122.97 0 1 0 -122.97,0 122.97,122.97 0 1 0 122.97,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601413" /><path
            class="xgrid"
            d="M 163.96,0 A 163.96,163.96 0 1 0 -163.96,0 163.96,163.96 0 1 0 163.96,0 Z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601415" /><path
            class="xgrid"
            d="m 204.95,0 a 204.95,204.95 0 1 0 -409.9,0 204.95,204.95 0 1 0 409.9,0 z"
-           style="stroke:#808080;stroke-width:1px;stroke-opacity:1"
+           style="stroke:#999999;stroke-width:0.75590551;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
            id="path601417" /></g><g
          class="polarsublayer frontplot"
          transform="translate(153.125,54)"
@@ -11064,25 +11079,25 @@
    xml:space="preserve"
    style="font-size:18px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
    x="151.64485"
-   y="-1085.7786"
+   y="-1051.2786"
    id="text701637-7-7"
    transform="scale(1,-1)"><tspan
      sodipodi:role="line"
      id="tspan701635-5-2"
      style="font-style:italic;stroke-width:0.75"
      x="151.64485"
-     y="-1085.7786">Figure 5: Example piecewise linear ECRH profiles</tspan></text><text
+     y="-1051.2786">Figure 5: Example piecewise linear ECRH profiles</tspan></text><text
    xml:space="preserve"
    style="font-size:18px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
    x="1855.7701"
-   y="-1085.9485"
+   y="-1051.4485"
    id="text701637-7-7-1"
    transform="scale(1,-1)"><tspan
      sodipodi:role="line"
      id="tspan701635-5-2-0"
      style="font-style:italic;stroke-width:0.75"
      x="1855.7701"
-     y="-1085.9485">Figure 6: Example sum-of-Gaussians ECRH profiles</tspan></text><text
+     y="-1051.4485">Figure 6: Example sum-of-Gaussians ECRH profiles</tspan></text><text
    xml:space="preserve"
    style="font-size:18px;line-height:1.25;font-family:Arial;-inkscape-font-specification:Arial;stroke-width:0.75"
    x="975.39264"
@@ -11098,4 +11113,54 @@
      style="font-style:italic;stroke-width:0.75"
      x="975.39264"
      y="-241.22223"
-     id="tspan755213">with piecewise linear ECRH (L) and sum-of-Gaussians ECRH (R)</tspan></text></g></svg>
+     id="tspan755213">with piecewise linear ECRH (L) and sum-of-Gaussians ECRH (R)</tspan></text><g
+   class="g-xtitle"
+   id="g202945"
+   transform="matrix(0.75000002,0,0,-0.75000002,889.12956,1529.712)"><text
+     class="xtitle"
+     x="378.81357"
+     y="40.574089"
+     text-anchor="middle"
+     style="font-weight:normal;font-size:36px;font-family:'Open Sans', verdana, arial, sans-serif;white-space:pre;opacity:1;fill:#242424"
+     id="text202943">Nearby</text><text
+     class="xtitle"
+     x="-82.211006"
+     y="41.328568"
+     text-anchor="middle"
+     style="font-weight:normal;font-size:36px;font-family:'Open Sans', verdana, arial, sans-serif;white-space:pre;fill:#242424"
+     id="text202943-5">Far away</text></g><g
+   class="g-ytitle"
+   transform="matrix(0,-0.75000002,-0.75000002,0,878.8634,1563.845)"
+   id="g202949"><text
+     class="ytitle"
+     transform="rotate(-90)"
+     x="-171.74663"
+     y="-107.78595"
+     text-anchor="middle"
+     style="font-weight:normal;font-size:36px;font-family:'Open Sans', verdana, arial, sans-serif;white-space:pre;opacity:1;fill:#242424"
+     id="text202947">£</text><text
+     class="ytitle"
+     transform="rotate(-90)"
+     x="-180.74663"
+     y="48.214046"
+     text-anchor="middle"
+     style="font-weight:normal;font-size:36px;font-family:'Open Sans', verdana, arial, sans-serif;white-space:pre;fill:#242424"
+     id="text202947-6">££</text></g><text
+   id="text11073-8"
+   class="TextShape"
+   style="font-size:0.340158px;fill-rule:evenodd;stroke-width:0.799994;stroke-linejoin:round"
+   transform="scale(1,-1)"
+   x="1005.0204"
+   y="-2064.95"><tspan
+     id="tspan11071-0"
+     font-weight="400"
+     font-size="847px"
+     class="TextParagraph"
+     style="font-weight:400;font-size:24.0095px;font-family:Arial, sans-serif;stroke-width:0.799994"><tspan
+       id="tspan11069-3"
+       y="-1742.821"
+       x="1777.7166"
+       class="TextPosition"
+       style="stroke-width:0.799994"><tspan
+         id="tspan11067-00"
+         style="fill:#000000;stroke:none;stroke-width:0.799994">Avoid NTMs</tspan></tspan></tspan></text></g></svg>
