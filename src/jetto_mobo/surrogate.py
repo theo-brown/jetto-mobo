@@ -1,23 +1,22 @@
-from typing import Union
+from typing import Literal, Union
 
 import torch
 from botorch import fit_gpytorch_mll
-from botorch.models import MultiTaskGP, SingleTaskGP
-from botorch.models.gpytorch import GPyTorchModel, ModelListGPyTorchModel
+from botorch.models import SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
-from botorch.utils.transforms import normalize, unnormalize
+from botorch.utils.transforms import normalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
-
-from jetto_mobo.configuration import SurrogateConfig
 
 
 def fit_surrogate_model(
     X: torch.Tensor,
     X_bounds: torch.Tensor,
     Y: torch.Tensor,
-    surrogate_config: SurrogateConfig,
-) -> Union[GPyTorchModel, ModelListGPyTorchModel]:
+    device: Union[str, torch.device, int],
+    dtype: Union[str, torch.dtype],
+    model: Literal["independent", "joint"] = "joint",
+) -> Union[SingleTaskGP, ModelListGP]:
     """
     Fit a surrogate model to the data.
 
@@ -29,12 +28,16 @@ def fit_surrogate_model(
         Bounds on the input space, shape (D, 2). bounds[i, 0] is the lower bound and bounds[i, 1] is the upper bound for the ith input.
     Y : torch.Tensor
         Output data. Shape is (N, M), where N is the number of data points and M is the number of output dimensions.
-    surrogate_config : SurrogateConfig
-        Surrogate model configuration.
+    device : Union[str, torch.device, int]
+        Device to use for fitting the surrogate model.
+    dtype : Union[str, torch.dtype]
+        Data type to use for fitting the surrogate model.
+    model : Literal["independent", "joint"], default = "joint"
+        Type of surrogate model to use. If "joint", all outputs are modelled jointly. If "independent", each output is modelled independently.
 
     Returns
     -------
-    botorch.models.model.Model
+    Union[SingleTaskGP, ModelListGP]
         Fitted surrogate model.
     """
     # Check that dimensions match
@@ -44,38 +47,29 @@ def fit_surrogate_model(
         )
 
     # Convert to correct device and data type
-    normalised_X = normalize(X, X_bounds).to(
-        device=surrogate_config.device, dtype=surrogate_config.dtype
-    )
-    Y_ = Y.to(device=surrogate_config.device, dtype=surrogate_config.dtype)
+    normalised_X_tensor = normalize(X, X_bounds).to(device=device, dtype=dtype)
+    Y_tensor = Y.to(device=device, dtype=dtype)
 
     # Select model
-    if surrogate_config.model == "SingleTaskGP":
+    if model == "joint":
         model = SingleTaskGP(
-            normalised_X,
-            Y_,
+            normalised_X_tensor,
+            Y_tensor,
         )
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
-    elif surrogate_config.model == "ModelListGP":
+    elif model == "independent":
         model = ModelListGP(
             *[
                 SingleTaskGP(
-                    normalised_X,
-                    Y_[:, i].unsqueeze(1),
+                    normalised_X_tensor,
+                    Y_tensor[:, i].unsqueeze(1),
                 )
-                for i in range(Y_.shape[1])
+                for i in range(Y_tensor.shape[1])
             ]
         )
         mll = SumMarginalLogLikelihood(model.likelihood, model)
-    elif surrogate_config.model == "MultiTaskGP":
-        model = MultiTaskGP(
-            normalised_X,
-            Y_,
-            task_feature=-1,
-        )
-        mll = ExactMarginalLogLikelihood(model.likelihood, model)
     else:
-        raise ValueError(f"Unknown model type {surrogate_config.model}.")
+        raise ValueError(f"Unknown model type {model}. Must be 'joint' or 'list'.")
 
     # Return fitted model
     fit_gpytorch_mll(mll)
