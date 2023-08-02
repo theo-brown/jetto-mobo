@@ -13,13 +13,10 @@ venv/
 # JETTO images and data
 jetto/templates/*
 jetto/images/*
-2023-*
-data/ga_piecewise_linear
-data/benchmark
-data/genetic_algorithm
-data/old
-data/mobo
-data/sobo
+data/*
 
-# Slurm
+# Docs
+docs/build
+
+# SLURM
 *.out
