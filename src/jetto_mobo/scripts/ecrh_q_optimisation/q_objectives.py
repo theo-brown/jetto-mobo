@@ -1,8 +1,5 @@
 import numpy as np
-from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
-
-from jetto_mobo.objectives import objective
 
 
 def proximity_of_q0_to_qmin(profiles: Dataset, timetraces: Dataset):
@@ -60,6 +57,11 @@ def rho_of_q_value(profiles: Dataset, timetraces: Dataset, value: float):
     condition_2 = xrho >= timetraces["ROQM"][-1].data
     i = np.where(condition_1 & condition_2)[0][0]
     return xrho[i]
+
+
+from jetto_tools.results import JettoResults
+
+from jetto_mobo.objectives import objective
 
 
 @objective

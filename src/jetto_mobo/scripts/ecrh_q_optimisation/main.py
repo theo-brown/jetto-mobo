@@ -1,4 +1,4 @@
-# TODO: write module-level docstring
+import argparse
 import asyncio
 import os
 from pathlib import Path
@@ -13,26 +13,23 @@ from q_objectives import q_vector_objective
 
 from jetto_mobo import acquisition, simulation, surrogate
 
-# Set up
-# TODO: Resume
-# TODO: argparse
-jetto_template = Path("jetto/templates/spr45")
-jetto_image = Path("jetto/images/sim.v220922.sif")
-jetto_timelimit = 10400
-jetto_fail_value = 0
-n_objectives = 7
-n_xrho = 150  # TODO: change to read from template
-batch_size = 5
-n_iterations = 16
-device = "cuda" if torch.cuda.is_available() else "cpu"
-dtype = torch.float64
-output_directory = Path("data/refactor")
-parameter_bounds = torch.tensor(
-    marsden_piecewise_linear_bounds
-)  # Bounds have to be tensor for fitting surrogate
+parser = argparse.ArgumentParser()
+parser.add_argument("--jetto_template", type=str, default="jetto/templates/spr45")
+parser.add_argument("--jetto_image", type=str, default="jetto/images/sim.v220922.sif")
+parser.add_argument("--jetto_timelimit", type=int, default=10400)
+parser.add_argument("--jetto_fail_value", type=int, default=0)
+parser.add_argument("--n_objectives", type=int, default=7)
+parser.add_argument("--n_xrho_points", type=int, default=150)
+parser.add_argument("--batch_size", type=int, default=5)
+parser.add_argument("--n_iterations", type=int, default=16)
+parser.add_argument(
+    "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+)
+parser.add_argument("--dtype", type=str, default="torch.float64")
+parser.add_argument("--output_directory", type=str, default="data/ecrh_q_optimisation")
+args = parser.parse_args()
 
 
-# TODO: write docstring
 def evaluate(
     ecrh_parameters_batch: np.ndarray,
     batch_directory: Path,
@@ -57,7 +54,7 @@ def evaluate(
         # Initialise config object
         config_directory = Path(f"{batch_directory}/candidate_{i}")
         config_object = simulation.create_config(
-            template=jetto_template, directory=config_directory
+            template=args.jetto_template, directory=config_directory
         )
 
         # Set the ECRH function
@@ -74,7 +71,9 @@ def evaluate(
     # Run asynchronously in parallel
     batch_output = asyncio.run(
         simulation.run_many(
-            jetto_image=jetto_image, run_configs=configs, timelimit=jetto_timelimit
+            jetto_image=args.jetto_image,
+            run_configs=configs,
+            timelimit=args.jetto_timelimit,
         )
     )
 
@@ -91,9 +90,9 @@ def evaluate(
             # Save objective value
             objective_values.append(q_vector_objective(results))
         else:
-            converged_ecrh.append(np.full(n_xrho, jetto_fail_value))
-            converged_q.append(np.full(n_xrho, jetto_fail_value))
-            objective_values.append(np.full(n_objectives, jetto_fail_value))
+            converged_ecrh.append(np.full(args.n_xrho, args.jetto_fail_value))
+            converged_q.append(np.full(args.n_xrho, args.jetto_fail_value))
+            objective_values.append(np.full(args.n_objectives, args.jetto_fail_value))
 
     return (
         np.array(converged_ecrh),
@@ -102,7 +101,6 @@ def evaluate(
     )
 
 
-# TODO: write docstring
 def write_to_file(
     root_label: str,
     ecrh_parameters_batch: Optional[np.ndarray] = None,
@@ -116,9 +114,9 @@ def write_to_file(
 
     Creates a file in ``output_directory/results.h5`` if it does not exist, and writes the given data to the file under the given root label.
     """
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-    with h5py.File(output_directory / "results.h5", "a") as f:
+    if not os.path.exists(args.output_directory):
+        os.makedirs(args.output_directory)
+    with h5py.File(args.output_directory / "results.h5", "a") as f:
         if ecrh_parameters_batch is not None:
             f.create_dataset(
                 f"{root_label}/ecrh_parameters", data=ecrh_parameters_batch
@@ -133,14 +131,18 @@ def write_to_file(
             f.create_dataset(f"{root_label}/objective_values", data=objective_values)
 
 
+# Bounds have to be tensor for fitting surrogate
+parameter_bounds = torch.tensor(marsden_piecewise_linear_bounds)
+
+
 # Generate initial data
 print("Generating initial data...")
 # Sobol sampling for initial candidates
 ecrh_parameters = acquisition.generate_initial_candidates(
     bounds=parameter_bounds,
-    n=batch_size,
-    device=device,
-    dtype=dtype,
+    n=args.batch_size,
+    device=args.device,
+    dtype=args.dtype,
 )
 # Save initial candidates to file
 write_to_file(
@@ -148,7 +150,7 @@ write_to_file(
     ecrh_parameters_batch=ecrh_parameters.detach().cpu().numpy(),
     preconverged_ecrh=np.array(
         [
-            marsden_piecewise_linear(xrho=np.linspace(0, 1, n_xrho), parameters=p)
+            marsden_piecewise_linear(xrho=np.linspace(0, 1, args.n_xrho), parameters=p)
             for p in ecrh_parameters.detach().cpu().numpy()
         ]
     ),
@@ -159,7 +161,7 @@ write_to_file(
     converged_q,
     objective_values,
 ) = evaluate(
-    ecrh_parameters.detach().cpu().numpy(), output_directory / "0_initialisation"
+    ecrh_parameters.detach().cpu().numpy(), args.output_directory / "0_initialisation"
 )
 # Save evaluated results to file
 write_to_file(
@@ -174,12 +176,12 @@ model = surrogate.fit_surrogate_model(
     X=ecrh_parameters,
     X_bounds=parameter_bounds,
     Y=objective_values,
-    device=device,
-    dtype=dtype,
+    device=args.device,
+    dtype=args.dtype,
     mode="joint",
 )
 
-for optimisation_step in range(1, n_iterations + 1):
+for optimisation_step in range(1, args.n_iterations + 1):
     # Generate trial candidates
     print(f"Optimisation step {optimisation_step}")
     new_ecrh_parameters = acquisition.generate_trial_candidates(
@@ -187,9 +189,9 @@ for optimisation_step in range(1, n_iterations + 1):
         bounds=parameter_bounds,
         model=model,
         acquisition_function=acquisition.qNoisyExpectedHypervolumeImprovement,
-        device=device,
-        dtype=dtype,
-        batch_size=batch_size,
+        device=args.device,
+        dtype=args.dtype,
+        batch_size=args.batch_size,
         mode="sequential",
         acqf_kwargs={"ref_point": torch.zeros(objective_values.shape[1])},
     )
@@ -198,7 +200,9 @@ for optimisation_step in range(1, n_iterations + 1):
         ecrh_parameters_batch=new_ecrh_parameters.detach().cpu().numpy(),
         preconverged_ecrh=np.array(
             [
-                marsden_piecewise_linear(xrho=np.linspace(0, 1, n_xrho), parameters=p)
+                marsden_piecewise_linear(
+                    xrho=np.linspace(0, 1, args.n_xrho), parameters=p
+                )
                 for p in new_ecrh_parameters.detach().cpu().numpy()
             ]
         ),
@@ -211,7 +215,7 @@ for optimisation_step in range(1, n_iterations + 1):
         new_objective_values,
     ) = evaluate(
         new_ecrh_parameters.detach().cpu().numpy(),
-        output_directory / str(optimisation_step),
+        args.output_directory / str(optimisation_step),
     )
     write_to_file(
         f"optimisation_step_{optimisation_step}",
@@ -229,7 +233,7 @@ for optimisation_step in range(1, n_iterations + 1):
         X=ecrh_parameters,
         X_bounds=parameter_bounds,
         Y=objective_values,
-        device=device,
-        dtype=dtype,
+        device=args.device,
+        dtype=args.dtype,
         mode="joint",
     )

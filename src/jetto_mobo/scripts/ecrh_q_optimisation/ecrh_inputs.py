@@ -1,10 +1,11 @@
 import numpy as np
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline  # Used to evaluate the input profile
 
+# Used for decorating the function, so MOBO knows how to use it
 from jetto_mobo.inputs import plasma_profile
 
 
-# TODO: docstring
+# Define the input to our optimisation problem as a plasma profile.
 @plasma_profile
 def marsden_piecewise_linear(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
     """
@@ -109,6 +110,7 @@ def marsden_piecewise_linear(xrho: np.ndarray, parameters: np.ndarray) -> np.nda
     return qece
 
 
+# Define the bounds for the parameters.
 marsden_piecewise_linear_bounds = np.array(
     [
         [0, 0.05, 0.01, 0.1, 0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
