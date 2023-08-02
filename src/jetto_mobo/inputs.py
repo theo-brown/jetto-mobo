@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 # TODO: write module-level docstring
+=======
+>>>>>>> 8a3aa1aaa673e79b915d04775bc75d3b5492d118
 from inspect import Parameter, Signature
 from typing import Callable
 
@@ -21,6 +24,7 @@ profile_signature = Signature(
 )
 
 
+<<<<<<< HEAD
 def plasma_profile(f: Callable) -> Callable:
     """Decorator to ensure that a function representing a parameterised plasma profile has the correct signature.
 
@@ -30,6 +34,12 @@ def plasma_profile(f: Callable) -> Callable:
     ------
     AttributeError
         If the signature of the decorated function is not ``(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray``.
+=======
+def profile(f: Callable) -> Callable:
+    """Decorator to ensure that a function representing a parameterised plasma profile has the correct signature.
+
+    Profile functions should be of the form f(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray.
+>>>>>>> 8a3aa1aaa673e79b915d04775bc75d3b5492d118
     """
     f_signature = Signature.from_callable(f)
     if f_signature != profile_signature:

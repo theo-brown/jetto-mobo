@@ -77,7 +77,7 @@ def fit_surrogate_model(
                     X_,
                     Y_[:, i].unsqueeze(1),
                 )
-                for i in range(Y_.shape[1])
+                for i in range(Y_tensor.shape[1])
             ]
         )
         mll = SumMarginalLogLikelihood(model.likelihood, model)
