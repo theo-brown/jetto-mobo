@@ -1,7 +1,0 @@
-jetto-tools
-botorch
-torch
-netCDF4
-matplotlib
-plotly
-h5py
