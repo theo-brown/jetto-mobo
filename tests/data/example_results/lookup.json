@@ -1,0 +1,29 @@
+{
+ "bound_ellip": {
+  "jset_id": "EquilEscoRef.dshEllipticity",
+  "nml_id": {
+   "namelist": "NLIST1",
+   "field": "ELONG"
+  },
+  "type": "real",
+  "dimension": "scalar"
+ },
+ "bcintrhon": {
+  "jset_id": null,
+  "nml_id": {
+   "namelist": "NLIST1",
+   "field": "BCINTRHON"
+  },
+  "type": "real",
+  "dimension": "scalar"
+ },
+ "ipraux": {
+  "jset_id": null,
+  "nml_id": {
+   "namelist": "INESCO",
+   "field": "IPRAUX"
+  },
+  "type": "int",
+  "dimension": "scalar"
+ }
+}
