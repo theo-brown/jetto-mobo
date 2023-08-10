@@ -9,11 +9,15 @@
 *.pyc
 *.egg-info
 venv/
+build
+dist
 
 # JETTO images and data
-jetto/templates/*
-jetto/images/*
-data/*
+jetto
+data
+
+# GS2 images and data
+gs2
 
 # Docs
 docs/build
