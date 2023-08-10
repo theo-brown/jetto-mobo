@@ -9,3 +9,5 @@
 
 
 This repository is currently under active development.
+
+For more information, see the [documentation](https://jetto-mobo.readthedocs.io/en/latest/).
