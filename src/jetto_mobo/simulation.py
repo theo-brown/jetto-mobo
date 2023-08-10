@@ -29,6 +29,18 @@ async def run(
 ) -> Optional[JettoResults]:
     """Run JETTO in an async subprocess, using a new container with the given config.
 
+    .. note::
+
+        As this is an *async* function, it must be run using ``asyncio``. For example::
+
+            asyncio.run(
+                simulation.run(
+                    run_config=my_run_config,
+                    run_directory=".",
+                    jetto_image="jetto.sif",
+                )
+            )
+
     Parameters
     ----------
     run_config : RunConfig
