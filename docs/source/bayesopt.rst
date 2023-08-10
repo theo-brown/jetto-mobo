@@ -8,7 +8,7 @@ Bayesian optimisation (BO) is a principled approach to performing gradient-free 
 Global optimisation tasks involve a tradeoff between **exploitation** and **exploration**.
 The core dilemma is whether we evaluate points in a region close to our current best guess of where the maximum is ('exploitation') or try out some points in a region where we don't have much knowledge, in the hope that it is better than what we've seen so far ('exploration').
 
-Many global optimisation algorithms tackle this dilemma by introducing stochastic exploration; for example, in a genetic algorithm, random mutations are introduced in every generation. 
+Many global optimisation algorithms tackle this dilemma by introducing stochastic exploration; for example, in a genetic algorithm, random mutations are introduced in every generation.
 However, purely random exploration has no guarantee of robustness - we're not guaranteed to stumble upon (or even move near) the best solution.
 
 Bayesian optimisation is a more principled method, using probabilistic inference to resolve the explore-exploit tradeoff.
@@ -53,8 +53,8 @@ The core equation behind EI is:
 .. math::
     \int \max(\phi - \phi^*, 0) p(\phi | x, \mathcal{D})d\phi
 
-where `\phi = \phi(x)`:math: is the objective function, `x`:math: is the input, `\mathcal{D}`:math: is the set of past input-objective pairs, and `\phi^*`:math: is the best objective value seen so far.
-Hence, `\max(\phi - \phi^*, 0)`:math: is the increase in objective value between a point `x`:math: and the best point we'd previously observed, and we take the expectation of this with respect to the predictive probability distribution over `\phi`:math:.
+where :math:`\phi = \phi(x)` is the objective function, :math:`x` is the input, :math:`\mathcal{D}` is the set of past input-objective pairs, and :math:`\phi^*` is the best objective value seen so far.
+Hence, :math:`\max(\phi - \phi^*, 0)` is the increase in objective value between a point :math:`x` and the best point we'd previously observed, and we take the expectation of this with respect to the predictive probability distribution over :math:`\phi`.
 
 An inner optimisation loop is performed to find the argmax of the acquisition function, which is selected as the next point to trial.
 In the batch setting (such as the `example in the next section <#example>`_), joint optimisation is performed to select the *set* of points that jointly maximise the acquisition function.
@@ -62,7 +62,7 @@ In the batch setting (such as the `example in the next section <#example>`_), jo
 
 Example
 -------
-As our objective, we seek to find the input value `x`:math: that corresponds to the maximum output value `\phi`:math: of the following function:
+As our objective, we seek to find the input value :math:`x` that corresponds to the maximum output value :math:`\phi` of the following function:
 
 .. figure:: images/true_function.svg
     :width: 95%
@@ -83,10 +83,10 @@ The basic BO routine is:
 
 1. Observe initial values
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-   
-At each optimisation step, we're allowed to observe the true value at a number of `x`-locations (in this case, 3).
 
-.. tip:: To generate the initial sample locations, we recommend using **Sobol sampling**. 
+At each optimisation step, we're allowed to observe the true value at a number of :math:`x`-locations (in this case, 3).
+
+.. tip:: To generate the initial sample locations, we recommend using **Sobol sampling**.
 
     Sobol sampling uses a pseudorandom generator to produce a set of evenly distributed ('low-discrepancy') samples.
     In comparison with true random samples, Sobol samples provide a more complete coverage of the space, at the expense of being less 'random'.
@@ -108,7 +108,7 @@ We select 3 input locations using Sobol sampling, and observe the true value of 
 .. note:: In ``jetto-mobo``, this would be performed by:
 
   1. Using :func:`jetto_mobo.acquisition.generate_initial_candidates` to generate the input values
-   
+
   2. Combining some problem-specific custom code with :func:`jetto_mobo.simulation.create_config` to create the JETTO configurations for each input value
 
   3. Using :func:`jetto_mobo.simulation.run_many` to run JETTO and produce JettoResults objects
@@ -119,7 +119,7 @@ We select 3 input locations using Sobol sampling, and observe the true value of 
 2. Fit probabilistic model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We train a GP model on the observations - the :math:`(x, \phi)` pairs - by maximising the marginal log likelihood. 
+We train a GP model on the observations - the :math:`(x, \phi)` pairs - by maximising the marginal log likelihood.
 This method of model fitting robustly balances the goodness of the model fit with the model complexity, preventing overfitting.
 
 .. figure:: images/model_1.svg
@@ -192,4 +192,3 @@ Additional resources
 - `BoTorch qNEHVI tutorial <https://botorch.org/tutorials/multi_objective_bo>`_
 
 .. [#] Daulton et al., "Parallel Bayesian Optimization of Multiple Noisy Objectives with Expected Hypervolume Improvement," `arXiv:2105.08195 <https://arxiv.org/abs/2105.08195>`_, 2021
-      

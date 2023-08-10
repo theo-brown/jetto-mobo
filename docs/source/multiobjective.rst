@@ -8,7 +8,7 @@ In *multi-objective* optimisation tasks, there are multiple metrics of interest;
 .. tip:: Sometimes, a multi-objective optimisation task can be cast to a single-objective task by introducing prior knowledge about the *relative importance* of the different objectives in the form of a weighting vector.
 
     However, applying a weighting vector introduces preconceptions about the tradeoff we want to make, and our optimisation algorithm will produce solutions that line up with our expectations.
-    
+
     **By taking a true multi-objective (vector) approach, we gain understanding of how the objectives interact and conflict, and can make a reasoned choice after observing all of the possible solutions.**
 
     Whether it is better to take a multi-objective or single-objective approach to optimisation depends on your application.
@@ -22,13 +22,13 @@ Comparing multi-objective (vector) solutions is not as straightforward - solutio
 In many real-world tasks, we're often interest in finding solutions that represent *optimal tradeoffs* between *multiple objectives*.
 This is particularly the case when there is a fair amount of freedom in the choice of tradeoff.
 
-For example, consider a 'responsiveness vs robustness' dilemma: a robot controller needs to have quick reactions to stimuli (responsiveness) but must also not react to noise and unwanted disturbances (robustness). 
+For example, consider a 'responsiveness vs robustness' dilemma: a robot controller needs to have quick reactions to stimuli (responsiveness) but must also not react to noise and unwanted disturbances (robustness).
 
 If we're still in the design phase, we might be unsure about the desired level of responsiveness or robustness, and might want to explore the solution space to evaluate the tradeoffs.
 However, maybe we have limited testing capacity and can only evaluate a few candidate controllers.
 As we can't exhaustively compute the performance boundary, we might end up with a plot like the following:
 
-.. figure:: images/pareto_front.svg 
+.. figure:: images/pareto_front.svg
     :width: 95%
     :figwidth: 95%
 
@@ -38,7 +38,7 @@ The points shown in red represent the optimal solutions to the tradeoff between 
 
 Although easy to visualise in this 2D toy example, the Pareto dominance criterion becomes less intuitive in higher dimensions.
 In particular, the dimensionality of the Pareto set increases as the number of objective functions increases, which means that in high dimensions a large proportion of the evaluated points are Pareto optimal.
-    
+
 It's also important to note that the Pareto optimal solutions lie on a continuous manifold, rather than a discrete set.
 Good multi-objective optimisation algorithms will try to find a diverse representation of the Pareto manifold.
 
@@ -86,4 +86,3 @@ For maximum interpretability, you can run the unconstrained optimisation and the
 The advantage of this method is that you can understand the impact of the constraints; for example, in the above figure, slackening the robustness constraint to 20% would enable significant performance improvements.
 
 However, the problem with masking in post-processing is that the optimiser may have wasted a lot of resources exploring regions that will be masked out. If efficiency is a higher priority, you should modify the objective functions so that they return 0 for solutions that violate the constraints.
-

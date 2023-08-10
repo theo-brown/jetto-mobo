@@ -1,4 +1,4 @@
-Installation 
+Installation
 ============
 
 Python environment
@@ -24,4 +24,4 @@ For development:
 ::
     pip install jetto_mobo[dev]
 
-For contributing guidelines, see `Contributing`.
+For contributing guidelines, see `Contributing`_.

@@ -1,4 +1,4 @@
-Usage 
+Usage
 =====
 
 We've designed the package so it is easy to write scripts that run MOBO for a particular JETTO problem.
@@ -63,7 +63,7 @@ First, some imports:
 
 .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
    :language: python
-   :linenos: 
+   :linenos:
    :lines: -15
 
 3.1 Argument parsing
@@ -72,7 +72,7 @@ Because we want it to be easy to use our final script for multiple different run
 
 .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
    :language: python
-   :linenos: 
+   :linenos:
    :lines: 16-30
 
 3.2 Evaluation helper function
@@ -81,7 +81,7 @@ Next, we define a helper function that takes a set of parameters, creates a JETT
 
 .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
    :language: python
-   :linenos: 
+   :linenos:
    :lines: 33-101
 
 3.3 Data storage
@@ -90,18 +90,18 @@ We also define a helper function to save our results to a file. Use your team's 
 
 .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
    :language: python
-   :linenos: 
+   :linenos:
    :lines: 104-131
 
 3.4 Initialisation
 ~~~~~~~~~~~~~~~~~~
-.. important:: 
+.. important::
     Parameter bounds must be a tensor! If you initialised them as a numpy array, cast them to a tensor before continuing.
     We do this with:
 
     .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
         :language: python
-        :linenos: 
+        :linenos:
         :lines: 135
 
 
@@ -109,7 +109,7 @@ Before starting, we need to generate some initial candidates.
 
 .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
    :language: python
-   :linenos: 
+   :linenos:
    :lines: 138-182
 
 3.5 Main loop
@@ -118,5 +118,5 @@ Now we can bring it all together in the main loop.
 
 .. literalinclude:: ../../src/jetto_mobo/scripts/ecrh_q_optimisation/main.py
    :language: python
-   :linenos: 
+   :linenos:
    :lines: 184-239

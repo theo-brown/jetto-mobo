@@ -6,6 +6,6 @@ extensions = [
     "numpydoc",
 ]
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = []  # type: ignore
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]

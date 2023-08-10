@@ -48,7 +48,7 @@ Firstly, it's important to note that just because something's Pareto optimal it 
 Additional post-processing or constraints on objectives are required to only return the useful results.
 
 The more interesting results are on the left.
-Here, we use a piecewise linear ECRH function - this is the same kind that is currently used in STEP. 
+Here, we use a piecewise linear ECRH function - this is the same kind that is currently used in STEP.
 We find two families of solutions - monotonic ones (blue) and double-peaked ones (yellow, red).
 These double-peaked profiles had been theoretically predicted but stable solutions hadn't been found using previous methods.
 Our method has managed to perform a more comprehensive search of the design space.

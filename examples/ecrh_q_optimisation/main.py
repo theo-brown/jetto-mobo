@@ -51,11 +51,7 @@ write_to_file(
     ),
 )
 # Evaluate initial candidates
-(
-    converged_ecrh,
-    converged_q,
-    objective_values,
-) = evaluate(
+(converged_ecrh, converged_q, objective_values,) = evaluate(
     ecrh_parameters_batch=ecrh_parameters.detach().cpu().numpy(),
     batch_directory=args.output_dir / "0_initialisation",
     jetto_template=args.jetto_template,
@@ -99,7 +95,8 @@ for optimisation_step in range(1, args.n_iterations + 1):
         acqf_kwargs={"ref_point": torch.zeros(objective_values.shape[1])},
     )
     write_to_file(
-        f"optimisation_step_{optimisation_step}",
+        output_file=args.output_dir / "results.h5",
+        root_label=f"optimisation_step_{optimisation_step}",
         ecrh_parameters_batch=new_ecrh_parameters.detach().cpu().numpy(),
         preconverged_ecrh=np.array(
             [
@@ -112,11 +109,7 @@ for optimisation_step in range(1, args.n_iterations + 1):
     )
 
     # Evaluate candidates
-    (
-        converged_ecrh,
-        converged_q,
-        new_objective_values,
-    ) = evaluate(
+    (converged_ecrh, converged_q, new_objective_values,) = evaluate(
         ecrh_parameters_batch=new_ecrh_parameters.detach().cpu().numpy(),
         batch_directory=args.output_directory / str(optimisation_step),
         jetto_template=args.jetto_template,
