@@ -14,8 +14,8 @@ def fit_surrogate_model(
     X: torch.Tensor,
     X_bounds: torch.Tensor,
     Y: torch.Tensor,
-    device: Optional[Union[str, torch.device, int]] = None,
-    dtype: Optional[Union[str, torch.dtype]] = None,
+    device: Union[str, torch.device, None] = None,
+    dtype: Optional[torch.dtype] = None,
     mode: Literal["independent", "joint"] = "joint",
     normalise: bool = True,
 ) -> Union[SingleTaskGP, ModelListGP]:
@@ -30,9 +30,9 @@ def fit_surrogate_model(
         Bounds on the input space, shape ``(D, 2)``. ``bounds[i, 0]`` is the lower bound and ``bounds[i, 1]`` is the upper bound for the ``i``th input.
     Y : torch.Tensor
         Output data. Shape is ``(N, M)``, where ``N`` is the number of data points and ``M`` is the number of output dimensions.
-    device : Optional[Union[str, torch.device, int]], default = None
+    device : Optional[Union[str, torch.device]], default = None
         Device to use for fitting the surrogate model. If None, the device of the input data (``X``) will be used.
-    dtype : Optional[Union[str, torch.dtype]], default = None
+    dtype : Optional[torch.dtype], default = None
         Data type to use for fitting the surrogate model. If None, the data type of the input data (``X``) will be used.
     mode : Literal["independent", "joint"], default = "joint"
         Type of surrogate model to use. If ``"joint"``, all outputs are modelled jointly. If ``"independent"``, each output is modelled independently.
@@ -82,7 +82,7 @@ def fit_surrogate_model(
         )
         mll = SumMarginalLogLikelihood(model.likelihood, model)
     else:
-        raise ValueError(f"Unknown model type {model}. Must be 'joint' or 'list'.")
+        raise ValueError(f"Unknown mode {mode}. Must be 'joint' or 'list'.")
 
     # Return fitted model
     fit_gpytorch_mll(mll)

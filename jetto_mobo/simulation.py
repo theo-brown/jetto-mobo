@@ -65,7 +65,7 @@ async def run(
     """
     if container_id is None:
         container_id = str(uuid4())
-    if timelimit < 0:
+    if timelimit is not None and timelimit < 0:
         timelimit = None
     jetto_image = Path(jetto_image)
     run_directory = Path(run_directory)
@@ -177,7 +177,7 @@ async def run_many(
                 run_directory=run_directory,
                 jetto_image=jetto_image,
                 timelimit=timelimit,
-                container_id=run_directory.stem,
+                container_id=Path(run_directory).stem,
             )
             for run_config, run_directory in run_configs.items()
         ]

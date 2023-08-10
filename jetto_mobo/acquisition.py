@@ -18,10 +18,10 @@ from botorch.utils.transforms import normalize, unnormalize
 
 
 def generate_initial_candidates(
-    bounds: Union[torch.Tensor, np.ndarray],
+    bounds: torch.Tensor,
     n: int,
-    device: Optional[Union[str, torch.device, int]] = None,
-    dtype: Optional[Union[str, torch.dtype]] = None,
+    device: Union[str, torch.device, None] = None,
+    dtype: Optional[torch.dtype] = None,
 ) -> torch.Tensor:
     """Generate initial candidates using Sobol sampling.
 
@@ -33,9 +33,9 @@ def generate_initial_candidates(
         A ``(2, D)`` array of lower and upper bounds for each of the ``D`` dimensions.
     n : int
         Number of initial candidates to generate.
-    device : Optional[Union[str, torch.device, int]] = None
+    device : Union[str, torch.device, None] = None
         Resulting tensor will be sent to this device.
-    dtype : Optional[Union[str, torch.dtype]] = None
+    dtype : Optional[torch.dtype] = None
         Resulting tensor will be cast to this data type.
 
     Returns
@@ -52,8 +52,8 @@ def generate_trial_candidates(
     bounds: torch.Tensor,
     model: Union[GPyTorchModel, ModelListGPyTorchModel],
     acquisition_function: AcquisitionFunction,
-    device: Optional[Union[str, torch.device, int]] = None,
-    dtype: Optional[Union[str, torch.dtype]] = None,
+    device: Union[torch.device, None] = None,
+    dtype: Optional[torch.dtype] = None,
     n_mc_samples: int = 256,
     batch_size: int = 1,
     raw_samples: int = 512,
@@ -78,9 +78,9 @@ def generate_trial_candidates(
         Trained surrogate model.
     acquisition_function : AcquisitionFunction
         Acquisition function to use for generating trial candidates. We recommend using either ``jetto_mobo.acquisition.qNoisyExpectedImprovement`` for single-objective optimisation and ``jetto_mobo.acquisition.qNoisyExpectedHypervolumeImprovement`` for multi-objective optimisation.
-    device : Union[str, torch.device, int], default = None
+    device : Union[str, torch.device, None], default = None
         Torch device to use for optimising the acquisition function. If None, optimisation will be performed using the device the model is on.
-    dtype : Union[str, torch.dtype], default = None
+    dtype : Optional[torch.dtype], default = None
         Torch data type to use for representing the candidates. If None, candidates will be cast to the same dtype as the model parameters.
     n_mc_samples : int, optional
         Number of samples to use in Monte Carlo estimation of expectations or integrals in the acquisition function (default: 256).
