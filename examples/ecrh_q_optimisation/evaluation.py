@@ -1,9 +1,7 @@
 import asyncio
-import os
 from pathlib import Path
 from typing import Optional, Tuple
 
-import h5py
 import jetto_tools
 import numpy as np
 
@@ -88,6 +86,11 @@ def evaluate(
         np.array(converged_q),
         np.array(objective_values),
     )
+
+
+import os
+
+import h5py
 
 
 def write_to_file(
