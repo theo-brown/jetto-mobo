@@ -6,9 +6,11 @@
         Multi-objective Bayesian optimisation for tokamak design in the JETTO plasma modelling code
     </em>
 </p>
-
-[![pre-commit](https://github.com/theo-brown/jetto-mobo/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/theo-brown/jetto-mobo/actions/workflows/pre-commit.yaml)
-
+<p align="center"> 
+    <a href="https://github.com/theo-brown/jetto-mobo/actions/workflows/pre-commit.yaml">
+        <img src="https://github.com/theo-brown/jetto-mobo/actions/workflows/pre-commit.yaml/badge.svg)">
+    </a> 
+</p>
 
 This repository is currently under active development.
 
