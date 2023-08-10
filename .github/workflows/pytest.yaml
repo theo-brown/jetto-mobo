@@ -22,4 +22,4 @@ jobs:
           pip install pytest
           pip install -e .
       - name: Test with pytest
-        run: pytest -vv
+        run: pytest -vv -m "not cuda and not jetto"
