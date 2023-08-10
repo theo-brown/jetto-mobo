@@ -5,12 +5,13 @@
 .vscode
 
 # Python
-*__pycache__
+**/__pycache__
 *.pyc
 *.egg-info
 venv/
 build
 dist
+**/.pytest_cache
 
 # JETTO images and data
 jetto
