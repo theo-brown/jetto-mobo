@@ -1,7 +1,9 @@
 # TODO: write module-level docstring
 import asyncio
+import logging
 import os
 import shutil
+import sys
 import tarfile
 from os import PathLike
 from pathlib import Path
@@ -11,6 +13,10 @@ from uuid import uuid4
 import jetto_tools
 from jetto_tools.config import RunConfig
 from jetto_tools.results import JettoResults
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 async def run(
@@ -76,7 +82,7 @@ async def run(
     # Run name is only used internally in this container, so it doesn't matter what it's called
     run_name = "run_name"
 
-    print(f"Launching container {container_id}...")
+    logger.info(f"Launching container {container_id}...")
     with open(run_directory / "singularity.log", "a") as log_file:
         # Start a container
         # Note: the JETTO image currently has a bug in the runscript that means that `singularity run` doesn't work,
@@ -133,7 +139,9 @@ async def run(
             await delete_container.wait()
 
     failed = run_jetto.returncode != 0 or timeout
-    print(f"Container {container_id} finished with return code {run_jetto.returncode}.")
+    logger.info(
+        f"Container {container_id} finished with return code {run_jetto.returncode}."
+    )
     return JettoResults(path=run_directory) if not failed else None
 
 
