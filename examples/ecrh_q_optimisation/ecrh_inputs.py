@@ -1,11 +1,12 @@
-import numpy as np
-from scipy.interpolate import CubicSpline  # Used to evaluate the input profile
+from typing import Union
 
-# Used for decorating the function, so MOBO knows how to use it
+import numpy as np
+from scipy.interpolate import CubicSpline
+from scipy.special import comb
+
 from jetto_mobo.inputs import plasma_profile
 
 
-# Define the input to our optimisation problem as a plasma profile.
 @plasma_profile
 def marsden_piecewise_linear(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
     """
@@ -110,10 +111,116 @@ def marsden_piecewise_linear(xrho: np.ndarray, parameters: np.ndarray) -> np.nda
     return qece
 
 
-# Define the bounds for the parameters.
 marsden_piecewise_linear_bounds = np.array(
     [
         [0, 0.05, 0.01, 0.1, 0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
         [1, 1, 0.09, 1, 1, 0.29, 0.9, 0.9, 1, 0.75, 0.9, 0.45],
     ]
 )
+
+
+def bernstein(i: Union[int, np.ndarray], n: int, t: np.ndarray) -> np.ndarray:
+    """
+    Evaluate the Bernstein basis polynomials at t.
+
+    $$
+    b_{i,n}(t) = \sum_{i=0}^n \binom{n}{i} t^i (1-t)^{n-i}
+    $$
+    """
+    return comb(n, i) * np.power.outer(t, i) * np.power.outer((1 - t), (n - i))
+
+
+def bezier_parametric(t: np.ndarray, control_points: np.ndarray) -> np.ndarray:
+    """
+    Parameters
+    ----------
+    t : np.ndarray
+        Array of parametric coordinate values, length M.
+    control_points : np.ndarray
+        Array of shape (N, 2), giving N control points in the form [[x1, y1], ..., [xN, yN]].
+
+    Returns
+    -------
+    np.ndarray
+        Bezier curve defined by the control points, evaluated at t. Shape (M, 2), where [:, 0] is x and [:, 1] y coordinates.
+    """
+    # Check control points
+    if not len(control_points.shape) == 2 or not control_points.shape[1] == 2:
+        raise ValueError(
+            f"control_points must be an array of shape (N, 2) (got {control_points.shape})."
+        )
+
+    n = control_points.shape[0]
+
+    # Evaluate basis functions
+    i = np.arange(n)
+    basis_functions = bernstein(i, n - 1, t)
+
+    # Evaluate bezier curve
+    return basis_functions @ control_points
+
+
+def bezier_x(
+    x: np.ndarray, control_points: np.ndarray, parametric_resolution: int = int(1e3)
+) -> np.ndarray:
+    """
+    Parameters
+    ----------
+    x : np.ndarray
+        Array of x coordinates to evaluate the bezier curve at.
+    control_points : np.ndarray
+        Array of shape (N, 2), giving N control points in the form [[x1, y1], ..., [xN, yN]].
+    parametric_resolution : int, default int(1e3)
+        Number of points to evaluate the bezier curve at to obtain the implicit/parametric coordinates.
+
+    Returns
+    -------
+    np.ndarray
+        Array of y coordinates, evaluated at x.
+    """
+    t = np.linspace(0, 1, parametric_resolution)
+    b = bezier_parametric(t, control_points)
+    implicit_points_x = b[:, 0]
+    implicit_points_y = b[:, 1]
+
+    # Interpolate into x coordinates
+    t_x = np.interp(
+        x, implicit_points_x, t
+    )  # t_x is the implicit/parametric value corresponding to x
+    b = bezier_parametric(t_x, control_points)
+    x_ = b[:, 0]
+    y = b[:, 1]
+
+    return y
+
+
+on_axis_smoothness = 0.05
+off_axis_smoothness = 0.05
+
+
+@plasma_profile
+def constrained_bezier_profile(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
+    """
+    Bezier curve evaluated at x, with added smoothness parameters to control the behaviour at the ends of the curve.
+
+    Parameters are of the form [y_start, x1, y1, ..., xn, yn, y_end].
+    Control points are [[0, y_start], [on_axis_smoothness, y_start], [x1, y1], ..., [xn, yn], [1-off_axis_smoothness, y_end], [1, y_end]].
+    """
+    y_start = parameters[0]
+    y_end = parameters[-1]
+    control_points_x = np.concatenate(
+        [
+            [0, on_axis_smoothness],
+            np.sort(parameters[1:-1:2]),
+            [1 - off_axis_smoothness, 1],
+        ]
+    )
+    control_points_y = np.concatenate(
+        [[y_start, y_start], parameters[1:-1:2], [y_end, y_end]]
+    )
+    if not control_points_x.shape == control_points_y.shape:
+        raise ValueError(
+            f"control_points_x and control_points_y must have the same shape (got {control_points_x.shape} and {control_points_y.shape})."
+        )
+    control_points = np.array([control_points_x, control_points_y]).T
+    return bezier_x(xrho, control_points, parametric_resolution=int(1e3))

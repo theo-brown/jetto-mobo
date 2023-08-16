@@ -1,5 +1,20 @@
 import numpy as np
+from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
+
+from jetto_mobo.objectives import objective
+
+
+def soft_greater_than_constraint(
+    x: np.ndarray, threshold: float, margin: float
+) -> np.ndarray:
+    """Soft constraint that is 0 when x < threshold, 1 when x > threshold + margin, and linear in between."""
+    if x < threshold:
+        return 0
+    if x > threshold + margin:
+        return 1
+    else:
+        return (x - threshold) / margin
 
 
 def proximity_of_q0_to_qmin(profiles: Dataset, timetraces: Dataset):
@@ -11,16 +26,11 @@ def proximity_of_q0_to_qmin(profiles: Dataset, timetraces: Dataset):
 def proximity_of_qmin_to_target(
     profiles: Dataset,
     timetraces: Dataset,
-    target: float = 2.2,
+    margin: float = 0.8,
     minimum: float = 2,
 ):
-    """exp(-|| min(q) - target ||)"""
-    qmin = timetraces["QMIN"][-1].data
-    if qmin < minimum:
-        return 0
-    else:
-        distance = np.abs(qmin - target)
-        return np.exp(-distance)
+    """0 if qmin < minimum, 1 if qmin > minimum + margin, linear in between."""
+    return soft_greater_than_constraint(timetraces["QMIN"][-1].data, minimum, margin)
 
 
 def proximity_of_argmin_q_to_axis(profiles: Dataset, timetraces: Dataset):
@@ -59,11 +69,6 @@ def rho_of_q_value(profiles: Dataset, timetraces: Dataset, value: float):
     return xrho[i]
 
 
-from jetto_tools.results import JettoResults
-
-from jetto_mobo.objectives import objective
-
-
 @objective
 def q_vector_objective(results: JettoResults) -> np.ndarray:
     """
@@ -87,7 +92,7 @@ def q_vector_objective(results: JettoResults) -> np.ndarray:
     return np.array(
         [
             proximity_of_q0_to_qmin(profiles, timetraces),
-            proximity_of_qmin_to_target(profiles, timetraces, target=2.2),
+            proximity_of_qmin_to_target(profiles, timetraces),
             proximity_of_argmin_q_to_axis(profiles, timetraces),
             q_increasing(profiles, timetraces),
             dq_increasing(profiles, timetraces),
