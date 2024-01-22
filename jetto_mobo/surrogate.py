@@ -5,7 +5,8 @@ import torch
 from botorch import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
-from botorch.utils.transforms import normalize
+from botorch.models.transforms.outcome import Standardize
+from botorch.models.transforms.input import Normalize
 from gpytorch.mlls import ExactMarginalLogLikelihood
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
 
@@ -18,6 +19,7 @@ def fit_surrogate_model(
     dtype: Optional[torch.dtype] = None,
     mode: Literal["independent", "joint"] = "joint",
     normalise: bool = True,
+    standardise: bool = True,
 ) -> Union[SingleTaskGP, ModelListGP]:
     """
     Fit a Gaussian process surrogate model to the data.
@@ -38,6 +40,8 @@ def fit_surrogate_model(
         Type of surrogate model to use. If ``"joint"``, all outputs are modelled jointly. If ``"independent"``, each output is modelled independently.
     normalise : bool, default = True
         Whether to normalise the input data before fitting the surrogate model. This normally results in improved performance.
+    standardise : bool, default = True
+        Whether to standardise the output data before fitting the surrogate model. This normally results in improved performance.
 
     Returns
     -------
@@ -60,14 +64,17 @@ def fit_surrogate_model(
             f"Shape of input and output data must match in the first dimension (got input shape {X.shape} and output shape {Y.shape})."
         )
 
-    if normalise:
-        X_ = normalize(X_, X_bounds_)
+    # Transforms
+    input_transform = Normalize(d=X_.size(-1), bounds=X_bounds) if normalise else None
+    output_transform = Standardize(m=Y.size(-1)) if standardise else None
 
     # Select model
     if mode == "joint":
         model = SingleTaskGP(
             X_,
             Y_,
+            input_transform=input_transform,
+            outcome_transform=output_transform,
         )
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
     elif mode == "independent":
@@ -76,6 +83,8 @@ def fit_surrogate_model(
                 SingleTaskGP(
                     X_,
                     Y_[:, i].unsqueeze(1),
+                    input_transform=input_transform,
+                    outcome_transform=output_transform,
                 )
                 for i in range(Y_.shape[1])
             ]

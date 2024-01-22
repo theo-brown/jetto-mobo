@@ -152,7 +152,7 @@ def generate_trial_candidates(
     # Generate trial candidates
     candidates, _ = optimize_acqf(
         acq_function=acqf,
-        bounds=bounds_,  # Setting the bounds to be the input bounds here means that we don't need to unnormalize afterwards
+        bounds=bounds_,
         q=batch_size,
         raw_samples=raw_samples,
         num_restarts=n_restarts,
