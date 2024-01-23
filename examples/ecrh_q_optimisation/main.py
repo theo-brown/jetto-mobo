@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import logging
 import sys
+from os import sched_getaffinity
 from pathlib import Path
 from typing import Tuple
 
@@ -30,12 +31,12 @@ parser.add_argument(
 )
 parser.add_argument("--jetto_timelimit", type=int, default=10400)
 parser.add_argument("--jetto_fail_value", type=int, default=0)
-parser.add_argument("--n_objectives", type=int, default=7)
+parser.add_argument("--n_objectives", type=int, default=6)
 parser.add_argument("--n_xrho_points", type=int, default=150)
 parser.add_argument("--batch_size", type=int, default=10)
 parser.add_argument("--initial_batch_size", type=int, default=30)
 parser.add_argument("--n_iterations", type=int, default=16)
-parser.add_argument("--reference_values", type=float, nargs="?", default=None)
+parser.add_argument("--reference_values", type=float, nargs="+", default=None)
 parser.add_argument(
     "--device",
     type=str,
@@ -52,8 +53,11 @@ parser.add_argument(
 )
 parser.add_argument("--n_parameters", type=int, default=12)
 parser.add_argument("--alpha", type=float, default=0.0)
+parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--resume", action="store_true")
 args = parser.parse_args()
+
+torch.manual_seed(args.seed)
 
 if args.parameterisation == "piecewise_linear":
     ecrh_function = marsden_piecewise_linear
@@ -63,9 +67,9 @@ elif args.parameterisation == "bezier":
     parameter_bounds = torch.tensor([[0] * args.n_parameters, [1] * args.n_parameters])
 
 if args.reference_values is None:
-    reference_values = np.array([0.0] * args.n_objectives)
+    reference_values = torch.tensor([0.0] * args.n_objectives)
 elif len(args.reference_values) == args.n_objectives:
-    reference_values = np.array(args.reference_values)
+    reference_values = torch.tensor(args.reference_values)
 else:
     raise ValueError(
         f"Length of reference values ({len(args.reference_values)}) does not match number of objectives ({args.n_objectives})."
@@ -125,12 +129,23 @@ def evaluate(
     objective_values = []
     for results in batch_output:
         if results is not None:
-            # Save converged profiles
-            profiles = results.load_profiles()
-            converged_ecrh.append(profiles["QECE"][-1])
-            converged_q.append(profiles["Q"][-1])
-            # Save objective value
-            objective_values.append(q_vector_objective(results))
+            try:
+                profiles = results.load_profiles()
+            except:
+                logger.warning(
+                    "Failed to load profiles; using objective values for failed JETTO run."
+                )
+                converged_ecrh.append(
+                    np.full(args.n_xrho_points, args.jetto_fail_value)
+                )
+                converged_q.append(np.full(args.n_xrho_points, args.jetto_fail_value))
+                objective_values.append(
+                    np.full(args.n_objectives, args.jetto_fail_value)
+                )
+            else:
+                converged_ecrh.append(profiles["QECE"][-1])
+                converged_q.append(profiles["Q"][-1])
+                objective_values.append(q_vector_objective(results))
         else:
             converged_ecrh.append(np.full(args.n_xrho_points, args.jetto_fail_value))
             converged_q.append(np.full(args.n_xrho_points, args.jetto_fail_value))
@@ -148,6 +163,7 @@ def evaluate(
 
 
 if args.resume:
+    # TODO: Update to permit batched initialisation data
     logger.info("Resuming from file...")
     with h5py.File(args.output_dir / "results.h5", "r") as f:
         # Read initialisation data
@@ -157,11 +173,12 @@ if args.resume:
         completed_optimisation_steps = len(f.keys()) - 1
         if completed_optimisation_steps > 0:
             for i in range(1, completed_optimisation_steps + 1):
+                logger.info(f"Loading data from optimisation step {i}...")
                 ecrh_parameters.append(
-                    torch.tensor(f[f"optimisation_step_{i+1}/ecrh_parameters"][:])
+                    torch.tensor(f[f"optimisation_step_{i}/ecrh_parameters"][:])
                 )
                 objective_values.append(
-                    torch.tensor(f[f"optimisation_step_{i+1}/objective_values"][:])
+                    torch.tensor(f[f"optimisation_step_{i}/objective_values"][:])
                 )
         # Concatenate
         ecrh_parameters = torch.cat(ecrh_parameters).to(
@@ -173,6 +190,7 @@ if args.resume:
 else:
     # Generate initial data
     logger.info("Generating initial data...")
+
     # Sobol sampling for initial candidates
     ecrh_parameters = acquisition.generate_initial_candidates(
         bounds=parameter_bounds,
@@ -180,35 +198,108 @@ else:
         device=args.device,
         dtype=args.dtype,
     )
-    # Save initial candidates to file
-    write_to_file(
-        output_file=args.output_dir / "results.h5",
-        root_label="initialisation",
-        ecrh_parameters_batch=ecrh_parameters.detach().cpu().numpy(),
-        preconverged_ecrh=np.array(
-            [
-                ecrh_function(xrho=np.linspace(0, 1, args.n_xrho_points), parameters=p)
-                for p in ecrh_parameters.detach().cpu().numpy()
+
+    # Get number of cores
+    n_cores = len(sched_getaffinity(0))
+    # Evaluate initial candidates in batches of size n_cores
+    for batch_index, candidate_index in enumerate(
+        range(0, args.initial_batch_size, n_cores)
+    ):
+        logger.info(f"Evaluating initial candidates (batch {batch_index})...")
+        ecrh_parameter_batch = (
+            ecrh_parameters[candidate_index : candidate_index + n_cores]
+            .detach()
+            .cpu()
+            .numpy()
+        )
+        # Save initial candidates to file
+        write_to_file(
+            output_file=args.output_dir / "results.h5",
+            root_label=f"initialisation/batch_{batch_index}",
+            ecrh_parameters_batch=ecrh_parameter_batch,
+            preconverged_ecrh=np.array(
+                [
+                    ecrh_function(
+                        xrho=np.linspace(0, 1, args.n_xrho_points), parameters=p
+                    )
+                    for p in ecrh_parameter_batch
+                ]
+            ),
+        )
+        (
+            converged_ecrh,
+            converged_q,
+            objective_values,
+        ) = evaluate(
+            ecrh_parameters_batch=ecrh_parameter_batch,
+            batch_directory=args.output_dir / f"0_initialisation_batch_{batch_index}",
+        )
+        # Save evaluated results to file
+        write_to_file(
+            output_file=args.output_dir / "results.h5",
+            root_label=f"initialisation/batch_{batch_index}",
+            converged_ecrh=converged_ecrh,
+            converged_q=converged_q,
+            objective_values=objective_values,
+        )
+
+    # Rearrange the file structure
+    with h5py.File(args.output_dir / "results.h5", "a") as h5file:
+        # Create new datasets
+        h5file.create_dataset(
+            "initialisation/converged_ecrh",
+            (args.initial_batch_size, args.n_xrho_points),
+        )
+        h5file.create_dataset(
+            "initialisation/converged_q", (args.initial_batch_size, args.n_xrho_points)
+        )
+        h5file.create_dataset(
+            "initialisation/ecrh_parameters",
+            (args.initial_batch_size, args.n_parameters),
+        )
+        h5file.create_dataset(
+            "initialisation/objective_values",
+            (args.initial_batch_size, args.n_objectives),
+        )
+        h5file.create_dataset(
+            "initialisation/preconverged_ecrh",
+            (args.initial_batch_size, args.n_xrho_points),
+        )
+
+        # Copy data across
+        for batch_index in range(args.initial_batch_size // n_cores):
+            lower_index = batch_index * n_cores
+            upper_index = lower_index + n_cores
+            h5file["initialisation/converged_ecrh"][lower_index:upper_index] = h5file[
+                f"initialisation/batch_{batch_index}/converged_ecrh"
             ]
-        ),
-    )
-    # Evaluate initial candidates
-    (
-        converged_ecrh,
-        converged_q,
-        objective_values,
-    ) = evaluate(
-        ecrh_parameters_batch=ecrh_parameters.detach().cpu().numpy(),
-        batch_directory=args.output_dir / "0_initialisation",
-    )
-    # Save evaluated results to file
-    write_to_file(
-        output_file=args.output_dir / "results.h5",
-        root_label="initialisation",
-        converged_ecrh=converged_ecrh,
-        converged_q=converged_q,
-        objective_values=objective_values,
-    )
+            h5file["initialisation/converged_q"][lower_index:upper_index] = h5file[
+                f"initialisation/batch_{batch_index}/converged_q"
+            ]
+            h5file["initialisation/ecrh_parameters"][lower_index:upper_index] = h5file[
+                f"initialisation/batch_{batch_index}/ecrh_parameters"
+            ]
+            h5file["initialisation/objective_values"][lower_index:upper_index] = h5file[
+                f"initialisation/batch_{batch_index}/objective_values"
+            ]
+            h5file["initialisation/preconverged_ecrh"][
+                lower_index:upper_index
+            ] = h5file[f"initialisation/batch_{batch_index}/preconverged_ecrh"]
+
+            del h5file[f"initialisation/batch_{batch_index}"]
+
+        # Load back into a tensor
+        ecrh_parameters = torch.tensor(
+            h5file["initialisation/ecrh_parameters"][:],
+            device=args.device,
+            dtype=args.dtype,
+        )
+        objective_values = torch.tensor(
+            h5file["initialisation/objective_values"][:],
+            device=args.device,
+            dtype=args.dtype,
+        )
+
     # Initialise optimisation step
     completed_optimisation_steps = 0
 
@@ -241,7 +332,7 @@ for optimisation_step in range(
         batch_size=args.batch_size,
         mode="sequential" if args.batch_size > 5 else "joint",
         acqf_kwargs={
-            "ref_point": torch.zeros(objective_values.shape[1]),
+            "ref_point": reference_values,
             "alpha": args.alpha,
             "prune_baseline": True,
         },

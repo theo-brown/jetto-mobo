@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 from jetto_tools.results import JettoResults
 from netCDF4 import Dataset
@@ -5,68 +7,139 @@ from netCDF4 import Dataset
 from jetto_mobo.objectives import objective
 
 
-def soft_greater_than_constraint(
-    x: np.ndarray, threshold: float, margin: float
+def soft_hat(
+    x: Union[float, np.ndarray],
+    x_lower: float = 0,
+    y_lower: float = 1e-3,
+    x_plateau_start: float = 0,
+    x_plateau_end: float = 0,
+    x_upper: float = 0,
+    y_upper: float = 1e-3,
 ) -> np.ndarray:
-    """Soft constraint that is 0 when x < threshold, 1 when x > threshold + margin, and linear in between."""
-    if x < threshold:
-        return 0
-    if x > threshold + margin:
-        return 1
-    else:
-        return (x - threshold) / margin
+    """
+    Smooth tophat function.
+
+    Passes through (x_lower, y_lower), (x_plateau_start, 1), (x_plateau_end, 1), (x_upper, y_upper).
+    Squared exponential decay from 0 to x_plateau_start and from x_plateau_end to infinity, with rate of decay such that y=y_lower at x=x_lower and y=y_upper at x=x_upper.
+
+    Parameters
+    ----------
+    x : Union[float, np.ndarray]
+        Input value
+    x_lower : float, optional
+        x-value at which y=y_lower (default: 0)
+    y_lower : float, optional
+        y-value at x=x_lower (default: 1e-3)
+    x_plateau_start : float, optional
+        x-value at which the plateau starts (default: 0)
+    x_plateau_end : float, optional
+        x-value at which the plateau ends (default: 0)
+    x_upper : float, optional
+        x-value at which y=y_upper (default: 0)
+    y_upper : float, optional
+        y-value at x=x_upper (default: 1e-3)
+
+    Returns
+    -------
+    np.ndarray
+        Smooth objective value
+    """
+    k_lower = -np.log(y_lower) / np.power(x_lower - x_plateau_start, 2)
+    k_upper = -np.log(y_upper) / np.power(x_upper - x_plateau_end, 2)
+    return np.piecewise(
+        x,
+        [
+            x < x_plateau_start,
+            (x >= x_plateau_start) & (x <= x_plateau_end),
+            x > x_plateau_end,
+        ],
+        [
+            lambda x: np.exp(-k_lower * np.power(x - x_plateau_start, 2)),
+            1,
+            lambda x: np.exp(-k_upper * np.power(x - x_plateau_end, 2)),
+        ],
+    )
 
 
-def proximity_of_q0_to_qmin(profiles: Dataset, timetraces: Dataset):
-    """exp(-|| q(0) - min(q) ||)"""
+def softmax(x: np.ndarray) -> np.ndarray:
+    exp = np.exp(x)
+    return exp / np.sum(exp)
+
+
+def q0_close_to_qmin(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
+    """1 if q0 = qmin, decaying to 0.5 at ||q0 - qmin|| = 2"""
     distance = np.abs(timetraces["Q0"][-1].data - timetraces["QMIN"][-1].data)
-    return np.exp(-distance)
+    return soft_hat(
+        distance,
+        x_lower=-1,  # Not used, as 0 < x < 1
+        y_lower=1e-3,  # Not used, as 0 < x < 1
+        x_plateau_start=0,
+        x_plateau_end=0,
+        x_upper=2,
+        y_upper=0.5,
+    )
 
 
-def proximity_of_qmin_to_target(
-    profiles: Dataset,
-    timetraces: Dataset,
-    margin: float = 0.8,
-    minimum: float = 2,
-):
-    """0 if qmin < minimum, 1 if qmin > minimum + margin, linear in between."""
-    return soft_greater_than_constraint(timetraces["QMIN"][-1].data, minimum, margin)
+def qmin_close_to_centre(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
+    """1 if argmin(q) = 0, decaying to 1e-3 at ||argmin(q)|| = 1"""
+    return soft_hat(
+        timetraces["ROQM"][-1].data,
+        x_lower=-1,  # Not used, as 0 < x < 1
+        y_lower=1e-3,  # Not used, as 0 < x < 1
+        x_plateau_start=0,
+        x_plateau_end=0,
+        x_upper=1,
+        y_upper=1e-3,
+    )
 
 
-def proximity_of_argmin_q_to_axis(profiles: Dataset, timetraces: Dataset):
-    """1 - argmin(q)"""
-    return 1 - timetraces["ROQM"][-1].data
+def qmin_in_safe_region(profiles: Dataset, timetraces: Dataset) -> float:
+    """1 if qmin between 2.2 and 2.5, decaying to 0.5 at 2 and 3"""
+    return soft_hat(
+        timetraces["QMIN"][-1].data,
+        x_lower=2.2,
+        y_lower=0.5,
+        x_plateau_start=2.2,
+        x_plateau_end=2.5,
+        x_upper=3,
+        y_upper=0.5,
+    )
 
 
-def q_increasing(profiles: Dataset, timetraces: Dataset):
-    """Fraction of curve where q is increasing, weighted by area"""
-    q = profiles["Q"][-1].data
-    # Shift q so that area is guaranteed to be positive
-    shifted_q = q - np.min(q)
-    dq = np.gradient(shifted_q)
-    increasing_q_area = np.sum(shifted_q[dq > 0])
-    non_increasing_q_area = np.sum(shifted_q[dq <= 0])
-    return increasing_q_area / (increasing_q_area + non_increasing_q_area)
+def q_increasing(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
+    """1 if q is increasing at every radial point, decaying to 1e-3 if q is non-increasing at every radial point"""
+    is_increasing = np.gradient(profiles["Q"][-1].data) > 0
+    return soft_hat(
+        np.mean(is_increasing),  # Fraction of curve where q is increasing
+        x_lower=0,
+        y_lower=1e-3,
+        x_plateau_start=1,
+        x_plateau_end=1,
+        x_upper=2,  # Not used, as 0 < x < 1
+        y_upper=1e-3,  # Not used, as 0 < x < 1
+    )
 
 
-def dq_increasing(profiles: Dataset, timetraces: Dataset):
-    """Fraction of curve where dq is increasing, weighted by area"""
-    dq = np.gradient(profiles["Q"][-1].data)
-    # Shift dq so that area is guaranteed to be positive
-    shifted_dq = dq - np.min(dq)
-    ddq = np.gradient(shifted_dq)
-    increasing_dq_area = np.sum(shifted_dq[ddq > 0])
-    non_increasing_dq_area = np.sum(shifted_dq[ddq <= 0])
-    return increasing_dq_area / (increasing_dq_area + non_increasing_dq_area)
+def maximise_radius_at_which_q_is_value(
+    profiles: Dataset, timetraces: Dataset, value: float
+) -> np.ndarray:
+    """1 if q=value at r>0.8 decaying to 0.5 if q=value at r=0.5
 
-
-def rho_of_q_value(profiles: Dataset, timetraces: Dataset, value: float):
-    """rho at first point where q>=value and r >= argmin(q)"""
+    Note that this excludes points where q=value but r < argmin(q)."""
     xrho = profiles["XRHO"][-1].data
     condition_1 = profiles["Q"][-1].data >= value
     condition_2 = xrho >= timetraces["ROQM"][-1].data
     i = np.where(condition_1 & condition_2)[0][0]
-    return xrho[i]
+    radius_of_q_is_value = xrho[i]
+    return soft_hat(
+        radius_of_q_is_value,
+        x_lower=0.5,
+        y_lower=0.5,
+        x_plateau_start=0.8,
+        x_plateau_end=1,
+        x_upper=2,  # Not used, as 0 < x < 1
+        y_upper=2,  # Not used, as 0 < x < 1
+    )
 
 
 @objective
@@ -78,26 +151,28 @@ def q_vector_objective(results: JettoResults) -> np.ndarray:
     -------
     np.ndarray
         Vector of objective values:
-        - Proximity of q0 to qmin
-        - Proximity of qmin to 2.2
-        - Proximity of argmin(q) to axis
-        - Fraction of curve where q is increasing, weighted by area
-        - Fraction of curve where dq is increasing, weighted by area
-        - rho at first point where q>=3 and r >= argmin(q)
-        - rho at first point where q>=4 and r >= argmin(q)
+        - Reduced 'height' of reversed shear at axis (q0 close to qmin)
+        - Reduced 'width' of reversed shear at axis (qmin close to r=0)
+        - Monotonic q (q increasing at every radial point)
+        - qmin in safe region (qmin between 2 and 3, with max reward between 2.2 and 2.5)
+        - Maximise radius at which q=3
+        - Maximise radius at which q=4
     """
     profiles = results.load_profiles()
     timetraces = results.load_timetraces()
 
+    return q_vector_objective_from_cdf(profiles, timetraces)
+
+
+def q_vector_objective_from_cdf(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
     return np.array(
         [
-            proximity_of_q0_to_qmin(profiles, timetraces),
-            proximity_of_qmin_to_target(profiles, timetraces),
-            proximity_of_argmin_q_to_axis(profiles, timetraces),
+            q0_close_to_qmin(profiles, timetraces),
+            qmin_close_to_centre(profiles, timetraces),
             q_increasing(profiles, timetraces),
-            dq_increasing(profiles, timetraces),
-            rho_of_q_value(profiles, timetraces, value=3),
-            rho_of_q_value(profiles, timetraces, value=4),
+            qmin_in_safe_region(profiles, timetraces),
+            maximise_radius_at_which_q_is_value(profiles, timetraces, 3),
+            maximise_radius_at_which_q_is_value(profiles, timetraces, 4),
         ]
     )
 
@@ -108,4 +183,11 @@ def q_scalar_objective(results: JettoResults, weights: np.ndarray) -> np.ndarray
     Weighted sum of q_vector_objective.
     """
     v = q_vector_objective(results)
-    return np.mean(weights * v)
+    return v @ weights
+
+
+def q_scalar_objective_from_cdf(
+    profiles: Dataset, timetraces: Dataset, weights: np.ndarray
+) -> np.ndarray:
+    v = q_vector_objective_from_cdf(profiles, timetraces)
+    return v @ weights

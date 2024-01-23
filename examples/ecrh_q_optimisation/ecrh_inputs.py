@@ -201,23 +201,32 @@ off_axis_smoothness = 0.05
 @plasma_profile
 def constrained_bezier_profile(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
     """
-    Bezier curve evaluated at x, with added smoothness parameters to control the behaviour at the ends of the curve.
+    Bezier curve evaluated at x, with added hyperparameters to control the behaviour at the ends of the curve.
 
-    Parameters are of the form [y_start, x1, y1, ..., xn, yn, y_end].
-    Control points are [[0, y_start], [on_axis_smoothness, y_start], [x1, y1], ..., [xn, yn], [1-off_axis_smoothness, y_end], [1, y_end]].
+    Parameters are of the form [y0, x1, y1, ..., xn].
+    Control points are [[0, y0], [on_axis_smoothness, y_0], [x1, y1], ..., [xn - off_axis_smoothness, 0], [xn, 0]].
     """
-    y_start = parameters[0]
-    y_end = parameters[-1]
+    y0 = parameters[0]
+    x_parameters = parameters[1:-1:2]
+    y_parameters = parameters[2:-1:2]
+    xn = parameters[-1]
+
     control_points_x = np.concatenate(
         [
             [0, on_axis_smoothness],
-            np.sort(parameters[1:-1:2]),
-            [1 - off_axis_smoothness, 1],
+            # Sort the x coordinates of the control points so that they are monotonically increasing in x.
+            # np.sort(x_parameters),
+            # OR
+            # Product the x coordinates of the control points so that they are monotonically increasing in x.
+            # x coordinates will be [x0*x1*...*xn, x1*...*xn, ..., xn]
+            # np.cumprod(x_parameters[::-1])[::-1],
+            # OR
+            # Use the x coordinates of the control points as they are.
+            x_parameters * xn,
+            [xn - off_axis_smoothness, xn],
         ]
     )
-    control_points_y = np.concatenate(
-        [[y_start, y_start], parameters[1:-1:2], [y_end, y_end]]
-    )
+    control_points_y = np.concatenate([[y0, y0], y_parameters, [0, 0]])
     if not control_points_x.shape == control_points_y.shape:
         raise ValueError(
             f"control_points_x and control_points_y must have the same shape (got {control_points_x.shape} and {control_points_y.shape})."
