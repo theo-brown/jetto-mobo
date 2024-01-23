@@ -9,6 +9,7 @@ from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
 from botorch.acquisition.multi_objective.monte_carlo import (
     qNoisyExpectedHypervolumeImprovement,
 )
+from botorch.acquisition.multi_objective.objective import IdentityMCMultiOutputObjective
 from botorch.models.gpytorch import GPyTorchModel, ModelListGPyTorchModel
 from botorch.optim import optimize_acqf
 from botorch.sampling.normal import SobolQMCNormalSampler
@@ -50,6 +51,7 @@ def generate_trial_candidates(
     bounds: torch.Tensor,
     model: Union[GPyTorchModel, ModelListGPyTorchModel],
     acquisition_function: AcquisitionFunction,
+    n_constraints: int = 0,
     device: Union[torch.device, None] = None,
     dtype: Optional[torch.dtype] = None,
     n_mc_samples: int = 256,
@@ -76,6 +78,8 @@ def generate_trial_candidates(
         Trained surrogate model.
     acquisition_function : AcquisitionFunction
         Acquisition function to use for generating trial candidates. We recommend using either ``jetto_mobo.acquisition.qNoisyExpectedImprovement`` for single-objective optimisation and ``jetto_mobo.acquisition.qNoisyExpectedHypervolumeImprovement`` for multi-objective optimisation.
+    n_constraints : int, optional, default = 0
+        Number of constraints. If nonzero, the last ``n_constraints`` outputs of the model will be treated as constraints.
     device : Union[str, torch.device, None], default = None
         Torch device to use for optimising the acquisition function. If None, optimisation will be performed using the device the model is on.
     dtype : Optional[torch.dtype], default = None
@@ -139,11 +143,23 @@ def generate_trial_candidates(
             device=device, dtype=dtype
         )
 
+    # Handle constraints
+    if n_constraints == 0:
+        objective = None
+        constraints = None
+    else:
+        objective = IdentityMCMultiOutputObjective(
+            outcomes=list(range(model_.num_outputs - n_constraints))
+        )
+        constraints = [lambda Y: Y[..., -i] for i in range(1, n_constraints + 1)]
+
     # Set up acquisition function
     acqf = acquisition_function(
         model=model_,
         X_baseline=observed_inputs_,
         sampler=SobolQMCNormalSampler(sample_shape=torch.Size([n_mc_samples])),
+        objective=objective,
+        constraints=constraints,
         **acqf_kwargs,
     )
 
