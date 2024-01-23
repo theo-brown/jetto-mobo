@@ -79,7 +79,7 @@ def generate_trial_candidates(
     acquisition_function : AcquisitionFunction
         Acquisition function to use for generating trial candidates. We recommend using either ``jetto_mobo.acquisition.qNoisyExpectedImprovement`` for single-objective optimisation and ``jetto_mobo.acquisition.qNoisyExpectedHypervolumeImprovement`` for multi-objective optimisation.
     n_constraints : int, optional, default = 0
-        Number of constraints. If nonzero, the last ``n_constraints`` outputs of the model will be treated as constraints.
+        Number of constraints. If nonzero, the last ``n_constraints`` outputs of the model will be treated as constraints. Constraint functions are of the form ``g(x) <= 0`` (i.e. negative if the constraint is satisfied).
     device : Union[str, torch.device, None], default = None
         Torch device to use for optimising the acquisition function. If None, optimisation will be performed using the device the model is on.
     dtype : Optional[torch.dtype], default = None
