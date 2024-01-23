@@ -3,7 +3,6 @@ from inspect import getmembers, isclass
 from typing import Literal, Optional, Union
 
 import botorch
-import numpy as np
 import torch
 from botorch.acquisition.acquisition import AcquisitionFunction
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
@@ -14,7 +13,6 @@ from botorch.models.gpytorch import GPyTorchModel, ModelListGPyTorchModel
 from botorch.optim import optimize_acqf
 from botorch.sampling.normal import SobolQMCNormalSampler
 from botorch.utils.sampling import draw_sobol_samples
-from botorch.utils.transforms import normalize, unnormalize
 
 
 def generate_initial_candidates(
@@ -144,7 +142,7 @@ def generate_trial_candidates(
     # Set up acquisition function
     acqf = acquisition_function(
         model=model_,
-        X_baseline=normalize(observed_inputs_, bounds_),
+        X_baseline=observed_inputs_,
         sampler=SobolQMCNormalSampler(sample_shape=torch.Size([n_mc_samples])),
         **acqf_kwargs,
     )
