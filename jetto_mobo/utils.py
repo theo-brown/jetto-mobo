@@ -1,6 +1,10 @@
 from typing import Optional
 
 import numpy as np
+import torch
+from botorch.utils.multi_objective.box_decompositions.dominated import (
+    DominatedPartitioning,
+)
 
 
 def get_pareto_dominant_mask(
@@ -54,3 +58,19 @@ def get_pareto_dominant_mask(
         )  # Constraints are negative if satisfied
 
     return is_dominant
+
+
+def compute_pareto_loghypervolume(
+    objective_values: torch.Tensor,
+    constraint_values: torch.Tensor,
+    reference_point: torch.Tensor,
+) -> float:
+    # Constraints are negative if satisfied
+    feasible_indices = torch.all(constraint_values <= 0, dim=1)
+
+    # Get the Pareto-dominant points via box decomposition
+    bd = DominatedPartitioning(
+        ref_point=reference_point,
+        Y=objective_values[feasible_indices],
+    )
+    return torch.log(bd.compute_hypervolume())
