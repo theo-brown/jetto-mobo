@@ -31,8 +31,9 @@ parser.add_argument(
     "--jetto_image", type=str, default="../../jetto/images/sim.v220922.sif"
 )
 parser.add_argument("--jetto_timelimit", type=int, default=10400)
-parser.add_argument("--jetto_fail_value", type=int, default=0)
-parser.add_argument("--n_objectives", type=int, default=6)
+parser.add_argument("--jetto_fail_value", type=float, default=0)
+parser.add_argument("--discard_failures", action="store_true")
+parser.add_argument("--sobol_only", action="store_true")
 parser.add_argument("--n_xrho_points", type=int, default=150)
 parser.add_argument("--batch_size", type=int, default=10)
 parser.add_argument("--initial_batch_size", type=int, default=30)
@@ -49,7 +50,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--parameterisation",
-    choices=["piecewise_linear", "bezier"],
+    choices=["piecewise_linear", "bezier", "bezier2"],
     default="piecewise_linear",
 )
 parser.add_argument("--n_parameters", type=int, default=12)
@@ -60,6 +61,10 @@ args = parser.parse_args()
 
 torch.manual_seed(args.seed)
 
+# Objectives
+n_objectives = 6
+
+# Input parameterisation
 if args.parameterisation == "piecewise_linear":
     ecrh_function = marsden_piecewise_linear
     parameter_bounds = torch.tensor(marsden_piecewise_linear_bounds)
@@ -71,14 +76,19 @@ elif args.parameterisation == "bezier2":
     parameter_bounds = torch.tensor([[0] * args.n_parameters, [1] * args.n_parameters])
 
 
+# Reference values
 if args.reference_values is None:
-    reference_values = torch.tensor([0.0] * args.n_objectives)
-elif len(args.reference_values) == args.n_objectives:
+    reference_values = torch.tensor([0.0] * n_objectives)
+elif len(args.reference_values) == n_objectives:
     reference_values = torch.tensor(args.reference_values)
 else:
     raise ValueError(
-        f"Length of reference values ({len(args.reference_values)}) does not match number of objectives ({args.n_objectives})."
+        f"Length of reference values ({len(args.reference_values)}) does not match number of objectives ({n_objectives})."
     )
+
+# Failure behaviour
+if not args.discard_failures:
+    failure_objective_value = args.jetto_fail_value
 
 
 def evaluate(
@@ -137,24 +147,19 @@ def evaluate(
             try:
                 profiles = results.load_profiles()
             except:
-                logger.warning(
-                    "Failed to load profiles; using objective values for failed JETTO run."
-                )
-                converged_ecrh.append(
-                    np.full(args.n_xrho_points, args.jetto_fail_value)
-                )
-                converged_q.append(np.full(args.n_xrho_points, args.jetto_fail_value))
-                objective_values.append(
-                    np.full(args.n_objectives, args.jetto_fail_value)
-                )
+                logger.warning("Failed to load profiles. Maybe the file was corrupted?")
+                converged_ecrh.append(np.full(args.n_xrho_points, np.nan))
+                converged_q.append(np.full(args.n_xrho_points, np.nan))
+                objective_values.append(np.full(n_objectives, np.nan))
             else:
                 converged_ecrh.append(profiles["QECE"][-1])
                 converged_q.append(profiles["Q"][-1])
                 objective_values.append(q_vector_objective(results))
         else:
-            converged_ecrh.append(np.full(args.n_xrho_points, args.jetto_fail_value))
-            converged_q.append(np.full(args.n_xrho_points, args.jetto_fail_value))
-            objective_values.append(np.full(args.n_objectives, args.jetto_fail_value))
+            logger.warning("JETTO failed to converge.")
+            converged_ecrh.append(np.full(args.n_xrho_points, np.nan))
+            converged_q.append(np.full(args.n_xrho_points, np.nan))
+            objective_values.append(np.full(n_objectives, np.nan))
 
     # Compress outputs
     for _, config_directory in configs.items():
@@ -185,6 +190,7 @@ if args.resume:
                 objective_values.append(
                     torch.tensor(f[f"optimisation_step_{i}/objective_values"][:])
                 )
+
         # Concatenate
         ecrh_parameters = torch.cat(ecrh_parameters).to(
             device=args.device, dtype=args.dtype
@@ -192,6 +198,7 @@ if args.resume:
         objective_values = torch.cat(objective_values).to(
             device=args.device, dtype=args.dtype
         )
+
 else:
     # Generate initial data
     logger.info("Generating initial data...")
@@ -300,43 +307,71 @@ else:
             dtype=args.dtype,
         )
 
+        # Compute and save the HVI
+        log_hypervolume = utils.compute_pareto_loghypervolume(
+            objective_values=objective_values,
+            reference_point=reference_values,
+        )
+        h5file["initialisation"].attrs["log_hypervolume"] = log_hypervolume
+
     # Initialise optimisation step
     completed_optimisation_steps = 0
 
-# Train surrogate model
-logger.info("Fitting surrogate model...")
-objective_values = torch.tensor(objective_values)
-model = surrogate.fit_surrogate_model(
-    X=ecrh_parameters,
-    X_bounds=parameter_bounds,
-    Y=objective_values,
-    device=args.device,
-    dtype=args.dtype,
-    mode="joint",
-)
 
 for optimisation_step in range(
     completed_optimisation_steps + 1,
     completed_optimisation_steps + 1 + args.n_iterations,
 ):
-    # Generate trial candidates
     logger.info(f"Optimisation step {optimisation_step}")
-    logger.info("Generating trial candidates...")
-    new_ecrh_parameters = acquisition.generate_trial_candidates(
-        observed_inputs=ecrh_parameters,
-        bounds=parameter_bounds,
-        model=model,
-        acquisition_function=acquisition.qNoisyExpectedHypervolumeImprovement,
-        device=args.device,
-        dtype=args.dtype,
-        batch_size=args.batch_size,
-        mode="sequential" if args.batch_size > 5 else "joint",
-        acqf_kwargs={
-            "ref_point": reference_values,
-            "alpha": args.alpha,
-            "prune_baseline": True,
-        },
-    )
+
+    # Drop any NaNs
+    logger.info("Handling NaNs...")
+    if args.discard_failures:
+        mask = ~torch.isnan(objective_values).any(dim=1)
+        ecrh_parameters = ecrh_parameters[mask]
+        objective_values = objective_values[mask]
+    else:
+        # Replace NaNs with failure values
+        objective_values[torch.isnan(objective_values)] = failure_objective_value
+
+    # Generate trial candidates
+    if args.sobol_only or objective_values.nelement() == 0:
+        # Use quasirandom Sobol sampling to generate trial candidates
+        logger.info("Generating trial candidates using Sobol sampling...")
+        new_ecrh_parameters = acquisition.generate_initial_candidates(
+            bounds=parameter_bounds,
+            n=args.batch_size,
+            device=args.device,
+            dtype=args.dtype,
+        )
+    else:
+        logger.info("Fitting surrogate model...")
+        model = surrogate.fit_surrogate_model(
+            inputs=ecrh_parameters,
+            input_bounds=parameter_bounds,
+            objective_values=objective_values,
+            device=args.device,
+            dtype=args.dtype,
+        )
+
+        # Use qNEHVI to generate trial candidates
+        logger.info("Generating trial candidates using qNEHVI...")
+        new_ecrh_parameters = acquisition.generate_trial_candidates(
+            observed_inputs=ecrh_parameters,
+            bounds=parameter_bounds,
+            model=model,
+            acquisition_function=acquisition.qNoisyExpectedHypervolumeImprovement,
+            n_constraints=0,
+            device=args.device,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            mode="sequential" if args.batch_size > 5 else "joint",
+            acqf_kwargs={
+                "ref_point": reference_values,
+                "alpha": args.alpha,
+                "prune_baseline": True,
+            },
+        )
     write_to_file(
         output_file=args.output_dir / "results.h5",
         root_label=f"optimisation_step_{optimisation_step}",
@@ -350,6 +385,7 @@ for optimisation_step in range(
     )
 
     # Evaluate candidates
+    logger.info("Evaluating trial candidates...")
     (
         converged_ecrh,
         converged_q,
@@ -366,17 +402,27 @@ for optimisation_step in range(
         objective_values=new_objective_values,
     )
 
-    # Update surrogate model
-    logger.info("Fitting surrogate model...")
+    # Concatenate new data
     ecrh_parameters = torch.cat([ecrh_parameters, new_ecrh_parameters])
+    # Have to convert new_objective_values to tensor, because it is a np.ndarray output from reading JettoResults
     objective_values = torch.cat(
-        [objective_values, torch.tensor(new_objective_values)]
-    )  # Have to convert new_objective_values to tensor, because it is a np.ndarray output from reading JettoResults
-    model = surrogate.fit_surrogate_model(
-        X=ecrh_parameters,
-        X_bounds=parameter_bounds,
-        Y=objective_values,
-        device=args.device,
-        dtype=args.dtype,
-        mode="joint",
+        [
+            objective_values,
+            torch.tensor(
+                new_objective_values,
+                device=args.device,
+                dtype=args.dtype,
+            ),
+        ]
+    )
+
+    # Compute and save the HVI
+    log_hypervolume = utils.compute_pareto_loghypervolume(
+        objective_values=objective_values,
+        reference_point=reference_values,
+    )
+    write_to_file(
+        output_file=args.output_dir / "results.h5",
+        root_label=f"optimisation_step_{optimisation_step}",
+        log_hypervolume=log_hypervolume,
     )
