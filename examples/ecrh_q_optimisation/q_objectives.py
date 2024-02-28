@@ -145,7 +145,7 @@ def maximise_radius_at_which_q_is_value(
 @objective
 def q_vector_objective(results: JettoResults) -> np.ndarray:
     """
-    Vector of 7 objective functions relating to the shape of the q-profile.
+    Vector of 6 objective functions relating to the shape of the q-profile.
 
     Returns
     -------
@@ -154,7 +154,7 @@ def q_vector_objective(results: JettoResults) -> np.ndarray:
         - Reduced 'height' of reversed shear at axis (q0 close to qmin)
         - Reduced 'width' of reversed shear at axis (qmin close to r=0)
         - Monotonic q (q increasing at every radial point)
-        - qmin in safe region (qmin between 2 and 3, with max reward between 2.2 and 2.5)
+        - qmin in safe region (2 < qmin < 3)
         - Maximise radius at which q=3
         - Maximise radius at which q=4
     """
@@ -173,6 +173,30 @@ def q_vector_objective_from_cdf(profiles: Dataset, timetraces: Dataset) -> np.nd
             qmin_in_safe_region(profiles, timetraces),
             maximise_radius_at_which_q_is_value(profiles, timetraces, 3),
             maximise_radius_at_which_q_is_value(profiles, timetraces, 4),
+        ]
+    )
+
+
+def q_constraints(results: JettoResults) -> np.ndarray:
+    """Vector of constraints on the q profile.
+
+    Constraint functions are of the form ``g(x) <= 0`` (i.e. negative if the constraint is satisfied).
+
+    Returns
+    -------
+    np.ndarray
+        Vector of constraint values:
+        - qmin > 2
+        - qmin < 3
+    """
+    return q_constraints_from_cdf(results.load_profiles(), results.load_timetraces())
+
+
+def q_constraints_from_cdf(profiles: Dataset, timetraces: Dataset) -> np.ndarray:
+    return np.array(
+        [
+            2 - timetraces["QMIN"][-1].data,
+            timetraces["QMIN"][-1].data - 3,
         ]
     )
 
