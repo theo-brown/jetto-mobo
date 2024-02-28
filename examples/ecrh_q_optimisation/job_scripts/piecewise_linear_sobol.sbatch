@@ -30,7 +30,7 @@ let "N_BAYESOPT_STEPS = 8 - $N_SOBOL_STEPS"
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo/examples/ecrh_q_optimisation
-OUTPUT_DIR=data/vector/piecewise_linear_fail0.3_2
+OUTPUT_DIR=data/vector/piecewise_linear_sobol_2
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
@@ -40,8 +40,8 @@ $CONDA_PREFIX/bin/python main.py \
 --n_iterations $N_BAYESOPT_STEPS \
 --output_dir $OUTPUT_DIR \
 --parameterisation piecewise_linear \
---jetto_fail_value 0.3 \
---alpha 0.01
+--sobol_only \
+--discard_failures
 EOM
 
 # Resume if target directory exists

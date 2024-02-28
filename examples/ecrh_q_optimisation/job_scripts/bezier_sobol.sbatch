@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J PiLiVec
+#SBATCH -J BezVec
 #SBATCH -A UKAEA-AP002-CPU
 #SBATCH -p icelake
 #SBATCH --output=%x_%j.out
@@ -30,7 +30,7 @@ let "N_BAYESOPT_STEPS = 8 - $N_SOBOL_STEPS"
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo/examples/ecrh_q_optimisation
-OUTPUT_DIR=data/vector/piecewise_linear_fail0.3_2
+OUTPUT_DIR=data/vector/bezier_sobol_batch32
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
@@ -39,9 +39,10 @@ $CONDA_PREFIX/bin/python main.py \
 --initial_batch_size $N_SOBOL_SAMPLES \
 --n_iterations $N_BAYESOPT_STEPS \
 --output_dir $OUTPUT_DIR \
---parameterisation piecewise_linear \
---jetto_fail_value 0.3 \
---alpha 0.01
+--parameterisation bezier \
+--sobol_only \
+--n_parameters 10 \
+--discard_failures
 EOM
 
 # Resume if target directory exists
