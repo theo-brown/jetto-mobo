@@ -196,38 +196,32 @@ else:
     # Generate initial data
     logger.info("Generating initial data...")
 
-    # Sobol sampling for initial candidates
-    ecrh_parameters = acquisition.generate_initial_candidates(
-        bounds=parameter_bounds,
-        n=args.initial_batch_size,
-        device=args.device,
-        dtype=args.dtype,
-    )
-
     # Get number of cores
     n_cores = len(sched_getaffinity(0))
+    n_batches = args.initial_batch_size // n_cores
+
     # Evaluate initial candidates in batches of size n_cores
-    for batch_index, candidate_index in enumerate(
-        range(0, args.initial_batch_size, n_cores)
-    ):
-        logger.info(f"Evaluating initial candidates (batch {batch_index})...")
-        ecrh_parameter_batch = (
-            ecrh_parameters[candidate_index : candidate_index + n_cores]
-            .detach()
-            .cpu()
-            .numpy()
+    for batch_index in range(n_batches):
+        # Sobol sampling for initial candidates
+        ecrh_parameters = acquisition.generate_initial_candidates(
+            bounds=parameter_bounds,
+            n=n_cores,
+            device=args.device,
+            dtype=args.dtype,
         )
+
+        logger.info(f"Evaluating initial candidates (batch {batch_index})...")
         # Save initial candidates to file
         write_to_file(
             output_file=args.output_dir / "results.h5",
             root_label=f"initialisation/batch_{batch_index}",
-            ecrh_parameters_batch=ecrh_parameter_batch,
+            ecrh_parameters_batch=ecrh_parameters.detach().cpu().numpy(),
             preconverged_ecrh=np.array(
                 [
                     ecrh_function(
                         xrho=np.linspace(0, 1, args.n_xrho_points), parameters=p
                     )
-                    for p in ecrh_parameter_batch
+                    for p in ecrh_parameters.detach().cpu().numpy()
                 ]
             ),
         )
@@ -236,7 +230,7 @@ else:
             converged_q,
             objective_values,
         ) = evaluate(
-            ecrh_parameters_batch=ecrh_parameter_batch,
+            ecrh_parameters_batch=ecrh_parameters.detach().cpu().numpy(),
             batch_directory=args.output_dir / f"0_initialisation_batch_{batch_index}",
         )
         # Save evaluated results to file
@@ -250,29 +244,30 @@ else:
 
     # Rearrange the file structure
     with h5py.File(args.output_dir / "results.h5", "a") as h5file:
+        n_evaluations = n_cores * n_batches
         # Create new datasets
         h5file.create_dataset(
             "initialisation/converged_ecrh",
-            (args.initial_batch_size, args.n_xrho_points),
+            (n_evaluations, args.n_xrho_points),
         )
         h5file.create_dataset(
-            "initialisation/converged_q", (args.initial_batch_size, args.n_xrho_points)
+            "initialisation/converged_q", (n_evaluations, args.n_xrho_points)
         )
         h5file.create_dataset(
             "initialisation/ecrh_parameters",
-            (args.initial_batch_size, args.n_parameters),
+            (n_evaluations, args.n_parameters),
         )
         h5file.create_dataset(
             "initialisation/objective_values",
-            (args.initial_batch_size, args.n_objectives),
+            (n_evaluations, n_objectives),
         )
         h5file.create_dataset(
             "initialisation/preconverged_ecrh",
-            (args.initial_batch_size, args.n_xrho_points),
+            (n_evaluations, args.n_xrho_points),
         )
 
         # Copy data across
-        for batch_index in range(args.initial_batch_size // n_cores):
+        for batch_index in range(n_batches):
             lower_index = batch_index * n_cores
             upper_index = lower_index + n_cores
             h5file["initialisation/converged_ecrh"][lower_index:upper_index] = h5file[
