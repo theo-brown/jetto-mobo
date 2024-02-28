@@ -233,3 +233,26 @@ def constrained_bezier_profile(xrho: np.ndarray, parameters: np.ndarray) -> np.n
         )
     control_points = np.array([control_points_x, control_points_y]).T
     return bezier_x(xrho, control_points, parametric_resolution=int(1e3))
+
+
+@plasma_profile
+def bezier_profile(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
+    """
+    Bezier curve evaluated at x.
+
+    Parameters are of the form [y0, x1, y1, ..., xn].
+    Control points are [[0, y0], [x1, y1], ..., [xn, 0]].
+    """
+    y0 = parameters[0]
+    x_parameters = parameters[1:-1:2]
+    y_parameters = parameters[2:-1:2]
+    xn = parameters[-1]
+
+    control_points_x = np.concatenate([[0], x_parameters * xn, [xn]])
+    control_points_y = np.concatenate([[y0], y_parameters, [0]])
+    if not control_points_x.shape == control_points_y.shape:
+        raise ValueError(
+            f"control_points_x and control_points_y must have the same shape (got {control_points_x.shape} and {control_points_y.shape})."
+        )
+    control_points = np.array([control_points_x, control_points_y]).T
+    return bezier_x(xrho, control_points, parametric_resolution=int(1e3))
