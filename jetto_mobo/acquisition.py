@@ -6,9 +6,7 @@ import botorch
 import torch
 from botorch.acquisition.acquisition import AcquisitionFunction
 from botorch.acquisition.monte_carlo import qNoisyExpectedImprovement
-from botorch.acquisition.multi_objective.monte_carlo import (
-    qNoisyExpectedHypervolumeImprovement,
-)
+from botorch.acquisition.multi_objective import qNoisyExpectedHypervolumeImprovement
 from botorch.acquisition.multi_objective.objective import IdentityMCMultiOutputObjective
 from botorch.models.gpytorch import GPyTorchModel, ModelListGPyTorchModel
 from botorch.optim import optimize_acqf
@@ -43,7 +41,7 @@ def generate_initial_candidates(
         Initial candidates. Shape is ``(n, D)``.
     """
     bounds = bounds.to(device=device, dtype=dtype)
-    return draw_sobol_samples(bounds, n=1, q=n).squeeze()
+    return draw_sobol_samples(bounds, n=n, q=1).squeeze()
 
 
 def generate_trial_candidates(
