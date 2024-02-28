@@ -11,6 +11,7 @@ import jetto_tools
 import numpy as np
 import torch
 from ecrh_inputs import (
+    bezier_profile,
     constrained_bezier_profile,
     marsden_piecewise_linear,
     marsden_piecewise_linear_bounds,
@@ -65,6 +66,10 @@ if args.parameterisation == "piecewise_linear":
 elif args.parameterisation == "bezier":
     ecrh_function = constrained_bezier_profile
     parameter_bounds = torch.tensor([[0] * args.n_parameters, [1] * args.n_parameters])
+elif args.parameterisation == "bezier2":
+    ecrh_function = bezier_profile
+    parameter_bounds = torch.tensor([[0] * args.n_parameters, [1] * args.n_parameters])
+
 
 if args.reference_values is None:
     reference_values = torch.tensor([0.0] * args.n_objectives)
