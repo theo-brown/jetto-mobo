@@ -78,9 +78,8 @@ def fit_surrogate_model(
     input_transform = (
         Normalize(d=inputs_.size(-1), bounds=input_bounds_) if normalise else None
     )
-    output_transform = (
-        Standardize(m=objective_values_.size(-1)) if standardise else None
-    )
+    # We're using a modellistgp, so each objective is treated separately
+    output_transform = Standardize(m=1) if standardise else None
 
     # Initialise model
     if constraint_values is not None:
