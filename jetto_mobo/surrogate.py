@@ -56,22 +56,23 @@ def fit_surrogate_model(
     # Convert to correct device and data type
     inputs_ = inputs.to(device=device, dtype=dtype)
     objective_values_ = objective_values.to(device=device, dtype=dtype)
-    constraint_values_ = constraint_values.to(device=device, dtype=dtype)
+    if constraint_values is not None:
+        constraint_values_ = constraint_values.to(device=device, dtype=dtype)
     input_bounds_ = input_bounds.to(device=device, dtype=dtype)
 
     # Check that dimensions match
     if not inputs.shape[0] == objective_values_.shape[0]:
         raise ValueError(
-            f"Shape of input and output data must match in the first dimension (got input shape {inputs.shape} and output shape {objective_values_.shape})."
+            f"Number of input and output points must match (got inputs.shape[0]={inputs.shape[0]} and outputs.shape[0]={objective_values_.shape[0]})."
         )
     if constraint_values is not None:
         if not inputs.shape[0] == constraint_values_.shape[0]:
             raise ValueError(
-                f"Shape of input and constraint data must match in the first dimension (got input shape {inputs.shape} and constraint shape {constraint_values_.shape})."
+                f"Number of input and constraint_value points must match (got inputs.shape[0]={inputs.shape[0]} and constraint_values.shape[0]={constraint_values_.shape[0]})."
             )
-    if not inputs.shape[1] == input_bounds_.shape[0]:
+    if not inputs.shape[1] == input_bounds_.shape[1]:
         raise ValueError(
-            f"Number of input dimensions must match the number of bounds (got input shape {inputs.shape} and bounds shape {input_bounds_.shape})."
+            f"Dimensionality of input points must match the number of bounds (got input dimension {inputs.shape[1]} and {input_bounds_.shape[1]} bounds)."
         )
 
     # Transforms
