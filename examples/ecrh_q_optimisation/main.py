@@ -19,7 +19,7 @@ from ecrh_inputs import (
 from q_objectives import q_vector_objective
 from utils import write_to_file
 
-from jetto_mobo import acquisition, simulation, surrogate
+from jetto_mobo import acquisition, simulation, surrogate, utils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
