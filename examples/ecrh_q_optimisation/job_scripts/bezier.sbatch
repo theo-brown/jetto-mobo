@@ -30,7 +30,7 @@ let "N_BAYESOPT_STEPS = 8 - $N_SOBOL_STEPS"
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo/examples/ecrh_q_optimisation
-OUTPUT_DIR=data/vector/bezier_fail0.3_batch32
+OUTPUT_DIR=data/bezier
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM

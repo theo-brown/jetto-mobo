@@ -1,0 +1,1 @@
+/home/tab53/.conda/envs/jetto-mobo/bin/python main.py --batch_size 32 --initial_batch_size 32 --n_iterations 7 --output_dir data/vector/piecewise_linear_fail0.3 --parameterisation piecewise_linear --jetto_fail_value 0.3 --alpha 0.01

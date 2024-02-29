@@ -30,7 +30,7 @@ let "N_BAYESOPT_STEPS = 8 - $N_SOBOL_STEPS"
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo/examples/ecrh_q_optimisation
-OUTPUT_DIR=data/vector/piecewise_linear_sobol_2
+OUTPUT_DIR=data/piecewise_linear_sobol
 
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM

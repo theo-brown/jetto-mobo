@@ -1,0 +1,1 @@
+/home/tab53/.conda/envs/jetto-mobo/bin/python main.py --batch_size 32 --initial_batch_size 32 --n_iterations 7 --output_dir data/vector/bezier_sobol_batch32 --parameterisation bezier --sobol_only --n_parameters 10 --discard_failures
