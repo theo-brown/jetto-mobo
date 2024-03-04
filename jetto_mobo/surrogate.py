@@ -2,7 +2,7 @@
 from typing import Optional, Union, Callable
 
 import torch
-from botorch import fit_gpytorch_mll
+from botorch.optim.fit import fit_gpytorch_mll_torch
 from botorch.models import SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.models.transforms.input import Normalize
@@ -130,7 +130,6 @@ def fit_surrogate_model(
         ]
         models = objective_models + constraint_models
         model = ModelListGP(*models)
-        mll = SumMarginalLogLikelihood(model.likelihood, model)
     else:
         model = ModelListGP(
             *[
@@ -147,5 +146,5 @@ def fit_surrogate_model(
 
     # Fit model
     mll = SumMarginalLogLikelihood(model.likelihood, model)
-    fit_gpytorch_mll(mll)
+    fit_gpytorch_mll_torch(mll)
     return model
