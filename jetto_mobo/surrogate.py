@@ -1,5 +1,5 @@
 # TODO: write module-level docstring
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 
 import torch
 from botorch import fit_gpytorch_mll
@@ -8,6 +8,10 @@ from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.models.transforms.input import Normalize
 from botorch.models.transforms.outcome import Standardize
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
+from gpytorch.priors.torch_priors import GammaPrior
+from gpytorch.kernels import MaternKernel, ScaleKernel
+
+from invariantkernels import GroupInvariantKernel
 
 
 def fit_surrogate_model(
@@ -19,6 +23,7 @@ def fit_surrogate_model(
     dtype: Optional[torch.dtype] = None,
     normalise: bool = True,
     standardise: bool = True,
+    transformation_group: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
 ) -> Union[SingleTaskGP, ModelListGP]:
     """
     Fit a Gaussian process surrogate model to the data.
@@ -42,6 +47,11 @@ def fit_surrogate_model(
         Whether to normalise the input data before fitting the surrogate model. This normally results in improved performance.
     standardise : bool, default = True
         Whether to standardise the objective data before fitting the surrogate model. This normally results in improved performance.
+    transformation_group : Optional[Callable[[torch.Tensor], torch.Tensor]], default = None
+        A function that generates all transformed versions of an input x for a given group (i.e., the orbits of x).
+        The function should take a tensor of shape (n, d) and return a tensor of shape (G, n, d) where G is the number of
+        elements of the group.
+        If set, the fitted surrogate model will be invariant to transformations in the group.
 
     Returns
     -------
@@ -79,8 +89,22 @@ def fit_surrogate_model(
     input_transform = (
         Normalize(d=inputs_.size(-1), bounds=input_bounds_) if normalise else None
     )
-    # We're using a modellistgp, so each objective is treated separately
+    # We're using a ModelListGP, so each objective is treated separately
     output_transform = Standardize(m=1) if standardise else None
+
+    # Kernel
+    kernel = ScaleKernel(
+        base_kernel=MaternKernel(
+            nu=2.5,
+            ard_num_dims=inputs_.shape[-1],
+            lengthscale_prior=GammaPrior(3.0, 6.0),
+        ),
+        outputscale_prior=GammaPrior(2.0, 0.15),
+    )
+    if transformation_group is not None:
+        kernel = GroupInvariantKernel(
+            base_kernel=kernel, transformation_group=transformation_group
+        )
 
     # Initialise model
     if constraint_values is not None:
@@ -88,6 +112,7 @@ def fit_surrogate_model(
             SingleTaskGP(
                 inputs_,
                 objective_values_[:, i].unsqueeze(1),
+                covar_module=kernel,
                 input_transform=input_transform,
                 outcome_transform=output_transform,
             )
@@ -97,6 +122,7 @@ def fit_surrogate_model(
             SingleTaskGP(
                 inputs_,
                 constraint_values_[:, i].unsqueeze(1),
+                covar_module=kernel,
                 input_transform=input_transform,
                 outcome_transform=output_transform,
             )
@@ -111,6 +137,7 @@ def fit_surrogate_model(
                 SingleTaskGP(
                     inputs_,
                     objective_values_[:, i].unsqueeze(1),
+                    covar_module=kernel,
                     input_transform=input_transform,
                     outcome_transform=output_transform,
                 )

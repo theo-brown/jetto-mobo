@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 from scipy.interpolate import CubicSpline
@@ -256,3 +256,61 @@ def bezier_profile(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
         )
     control_points = np.array([control_points_x, control_points_y]).T
     return bezier_x(xrho, control_points, parametric_resolution=int(1e3))
+
+
+def _gaussian(x: np.ndarray, mean: float, std: float, area: float = 1.0) -> np.ndarray:
+    """A Gaussian bump with the given mean, standard deviation, and area.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array of x coordinates.
+    mean : float
+        Mean of the Gaussian.
+    std : float
+        Standard deviation of the Gaussian.
+    area : float, default 1.
+        Area of the Gaussian.
+    """
+    scale = area / (std * np.sqrt(2 * np.pi))
+    return scale * np.exp(-0.5 * ((x - mean) / std) ** 2)
+
+
+def sum_of_gaussians(
+    x: np.ndarray,
+    means: np.ndarray,
+    stds: np.ndarray,
+    areas: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """Sum of Gaussian bumps.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Array of x coordinates.
+    means : np.ndarray
+        Array of means of the Gaussians.
+    stds : np.ndarray
+        Array of standard deviations of the Gaussians.
+    areas : Optional[np.ndarray], default None
+        Array of areas of the Gaussians. If None, the areas are assumed to be 1.
+    """
+    if areas is None:
+        areas = np.ones(len(means))
+    return np.sum(
+        [_gaussian(x, mean, std, area) for mean, std, area in zip(means, stds, areas)],
+        axis=0,
+    )
+
+
+@plasma_profile
+def sum_of_gaussians_profile(xrho: np.ndarray, parameters: np.ndarray) -> np.ndarray:
+    """
+    Sum of Gaussian bumps evaluated at x.
+    Each Gaussian is fixed to have area 1.
+
+    Parameters are of the form [mean_1, std_1, mean_2, std_2, ...].
+    """
+    means = parameters[0::2]
+    stds = parameters[1::2]
+    return sum_of_gaussians(xrho, means, stds)

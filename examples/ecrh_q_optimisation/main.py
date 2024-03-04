@@ -15,11 +15,13 @@ from ecrh_inputs import (
     constrained_bezier_profile,
     marsden_piecewise_linear,
     marsden_piecewise_linear_bounds,
+    sum_of_gaussians_profile,
 )
 from q_objectives import q_vector_objective
 from utils import write_to_file
 
 from jetto_mobo import acquisition, simulation, surrogate, utils
+from invariantkernels.transformation_groups import block_permutation_group
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -50,10 +52,11 @@ parser.add_argument(
 )
 parser.add_argument(
     "--parameterisation",
-    choices=["piecewise_linear", "bezier", "bezier2"],
+    choices=["piecewise_linear", "bezier", "bezier2", "sum_of_gaussians"],
     default="piecewise_linear",
 )
 parser.add_argument("--n_parameters", type=int, default=12)
+parser.add_argument("--invariance", choices=[None, "2_block_permutation"], default=None)
 parser.add_argument("--alpha", type=float, default=0.0)
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--resume", action="store_true")
@@ -74,7 +77,23 @@ elif args.parameterisation == "bezier":
 elif args.parameterisation == "bezier2":
     ecrh_function = bezier_profile
     parameter_bounds = torch.tensor([[0] * args.n_parameters, [1] * args.n_parameters])
+elif args.parameterisation == "sum_of_gaussians":
+    ecrh_function = sum_of_gaussians_profile
+    n_gaussians = args.n_parameters // 2
+    mean_bounds = (0, 1)
+    std_bounds = (0.01, 0.2)
+    parameter_bounds = torch.tensor(
+        [
+            [mean_bounds[0], std_bounds[0]] * n_gaussians,
+            [mean_bounds[1], std_bounds[1]] * n_gaussians,
+        ]
+    )
 
+# Invariance
+if args.invariance == "2_block_permutation":
+    transformation_group = block_permutation_group(2)
+else:
+    transformation_group = None
 
 # Reference values
 if args.reference_values is None:
@@ -289,9 +308,9 @@ else:
             h5file["initialisation/objective_values"][lower_index:upper_index] = h5file[
                 f"initialisation/batch_{batch_index}/objective_values"
             ]
-            h5file["initialisation/preconverged_ecrh"][
-                lower_index:upper_index
-            ] = h5file[f"initialisation/batch_{batch_index}/preconverged_ecrh"]
+            h5file["initialisation/preconverged_ecrh"][lower_index:upper_index] = (
+                h5file[f"initialisation/batch_{batch_index}/preconverged_ecrh"]
+            )
 
             del h5file[f"initialisation/batch_{batch_index}"]
 
@@ -352,6 +371,7 @@ for optimisation_step in range(
             objective_values=objective_values,
             device=args.device,
             dtype=args.dtype,
+            transformation_group=transformation_group,
         )
 
         # Use qNEHVI to generate trial candidates
