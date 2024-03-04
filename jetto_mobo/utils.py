@@ -62,15 +62,19 @@ def get_pareto_dominant_mask(
 
 def compute_pareto_loghypervolume(
     objective_values: torch.Tensor,
-    constraint_values: torch.Tensor,
     reference_point: torch.Tensor,
+    constraint_values: Optional[torch.Tensor] = None,
 ) -> float:
-    # Constraints are negative if satisfied
-    feasible_indices = torch.all(constraint_values <= 0, dim=1)
+    if constraint_values is not None:
+        # Constraints are negative if satisfied
+        feasible_indices = torch.all(constraint_values <= 0, dim=1)
+        feasible_objective_values = objective_values[feasible_indices]
+    else:
+        feasible_objective_values = objective_values
 
     # Get the Pareto-dominant points via box decomposition
     bd = DominatedPartitioning(
         ref_point=reference_point,
-        Y=objective_values[feasible_indices],
+        Y=feasible_objective_values,
     )
     return torch.log(bd.compute_hypervolume())
