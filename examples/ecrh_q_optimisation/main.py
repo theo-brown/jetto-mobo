@@ -91,7 +91,7 @@ elif args.parameterisation == "sum_of_gaussians":
 
 # Invariance
 if args.invariance == "2_block_permutation":
-    transformation_group = block_permutation_group(2)
+    transformation_group = lambda x: block_permutation_group(x, 2)
 else:
     transformation_group = None
 
@@ -327,11 +327,11 @@ else:
         )
 
         # Compute and save the HVI
-        log_hypervolume = utils.compute_pareto_loghypervolume(
-            objective_values=objective_values,
-            reference_point=reference_values,
-        )
-        h5file["initialisation"].attrs["log_hypervolume"] = log_hypervolume
+        #log_hypervolume = utils.compute_pareto_loghypervolume(
+        #    objective_values=objective_values,
+        #    reference_point=reference_values,
+        #)
+        #h5file["initialisation"].attrs["log_hypervolume"] = log_hypervolume
 
     # Initialise optimisation step
     completed_optimisation_steps = 0
@@ -436,13 +436,13 @@ for optimisation_step in range(
         ]
     )
 
-    # Compute and save the HVI
-    log_hypervolume = utils.compute_pareto_loghypervolume(
-        objective_values=objective_values,
-        reference_point=reference_values,
-    )
-    write_to_file(
-        output_file=args.output_dir / "results.h5",
-        root_label=f"optimisation_step_{optimisation_step}",
-        log_hypervolume=log_hypervolume,
-    )
+    ## Compute and save the HVI
+    #log_hypervolume = utils.compute_pareto_loghypervolume(
+    #    objective_values=objective_values,
+    #    reference_point=reference_values,
+    #)
+    #write_to_file(
+    #    output_file=args.output_dir / "results.h5",
+    #    root_label=f"optimisation_step_{optimisation_step}",
+    #    log_hypervolume=log_hypervolume,
+    #)
