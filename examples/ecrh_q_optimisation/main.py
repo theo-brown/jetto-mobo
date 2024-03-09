@@ -60,6 +60,7 @@ parser.add_argument("--n_parameters", type=int, default=12)
 parser.add_argument("--invariance", choices=[None, "2_block_permutation"], default=None)
 parser.add_argument("--alpha", type=float, default=0.0)
 parser.add_argument("--seed", type=int, default=0)
+parser.add_argument("--jitter", type=float, default=1e-4)
 parser.add_argument("--resume", action="store_true")
 args = parser.parse_args()
 
@@ -379,6 +380,7 @@ for optimisation_step in range(
             device=args.device,
             dtype=args.dtype,
             transformation_group=transformation_group,
+            jitter=args.jitter,
         )
 
         # Use qNEHVI to generate trial candidates

@@ -2,6 +2,7 @@
 from typing import Optional, Union, Callable
 
 import torch
+import gpytorch
 from botorch.fit import fit_gpytorch_mll
 from botorch.models import SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
@@ -10,7 +11,6 @@ from botorch.models.transforms.outcome import Standardize
 from gpytorch.mlls.sum_marginal_log_likelihood import SumMarginalLogLikelihood
 from gpytorch.priors.torch_priors import GammaPrior
 from gpytorch.kernels import MaternKernel, ScaleKernel
-
 from invariantkernels import GroupInvariantKernel
 
 
@@ -24,6 +24,7 @@ def fit_surrogate_model(
     normalise: bool = True,
     standardise: bool = True,
     transformation_group: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+    jitter: float = 1e-4,
 ) -> Union[SingleTaskGP, ModelListGP]:
     """
     Fit a Gaussian process surrogate model to the data.
@@ -52,6 +53,8 @@ def fit_surrogate_model(
         The function should take a tensor of shape (n, d) and return a tensor of shape (G, n, d) where G is the number of
         elements of the group.
         If set, the fitted surrogate model will be invariant to transformations in the group.
+    jitter : float, default = 1e-4
+        Jitter to add to the diagonal of the covariance matrix for numerical stability.
 
     Returns
     -------
@@ -146,5 +149,6 @@ def fit_surrogate_model(
 
     # Fit model
     mll = SumMarginalLogLikelihood(model.likelihood, model)
-    fit_gpytorch_mll(mll)
+    with gpytorch.settings.cholesky_jitter(jitter):
+        fit_gpytorch_mll(mll)
     return model
