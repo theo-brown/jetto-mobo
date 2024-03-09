@@ -5,6 +5,7 @@ import sys
 from os import sched_getaffinity
 from pathlib import Path
 from typing import Tuple
+import warnings 
 
 import h5py
 import jetto_tools
@@ -46,7 +47,7 @@ parser.add_argument(
     type=str,
     default=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu"),
 )
-parser.add_argument("--dtype", type=torch.dtype, default=torch.float64)
+parser.add_argument("--dtype", type=torch.dtype, default=torch.float32) # Botorch will complain that you're not using float64. HOWEVER: the outputs of JETTO are float32, and telling the surrogate model that it is float64 will introduce errors.
 parser.add_argument(
     "--output_dir", type=Path, default=Path("data/piecewise_linear_mobo")
 )
@@ -63,6 +64,12 @@ parser.add_argument("--resume", action="store_true")
 args = parser.parse_args()
 
 torch.manual_seed(args.seed)
+
+# Warn about dtype
+if args.dtype != torch.float32:
+    warnings.warn(
+        "Using a different dtype than float32 may introduce errors, as the output of JETTO is float32"
+    )
 
 # Objectives
 n_objectives = 6
