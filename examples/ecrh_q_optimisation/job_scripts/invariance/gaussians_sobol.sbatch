@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J SoGsob
 #SBATCH -A UKAEA-AP002-CPU
-#SBATCH -p icelake
+#SBATCH -p cclake
 #SBATCH --output=%x_%j.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -12,7 +12,7 @@
 # Set up environment
 . /etc/profile.d/modules.sh
 module purge
-module load rhel8/default-icl
+module load rhel8/default-ccl
 module load miniconda/3
 source /home/tab53/.bashrc
 conda activate jetto-mobo

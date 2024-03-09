@@ -1,18 +1,19 @@
 #!/bin/bash
 #SBATCH -J SoG
 #SBATCH -A UKAEA-AP002-CPU
-#SBATCH -p icelake
+#SBATCH -p cclake
 #SBATCH --output=%x_%j.out
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --exclusive
+#SBATCH --mem=0
 #SBATCH --time=24:00:00
 #SBATCH --mail-type=ALL
 
 # Set up environment
 . /etc/profile.d/modules.sh
 module purge
-module load rhel8/default-icl
+module load rhel8/default-ccl
 module load miniconda/3
 source /home/tab53/.bashrc
 conda activate jetto-mobo
@@ -25,8 +26,9 @@ LD_LIBRARY_PATH=$CONDA_PREFIX/lib/python3.10/site-packages/nvidia/cublas/lib/:$L
 
 # Parameters
 N_SOBOL_STEPS=1
-let "N_SOBOL_SAMPLES = $SLURM_CPUS_PER_TASK * $N_SOBOL_STEPS"
-let "N_BAYESOPT_STEPS = 8 - $N_SOBOL_STEPS"
+# let "N_SOBOL_SAMPLES = $SLURM_CPUS_PER_TASK * $N_SOBOL_STEPS"
+# let "N_BAYESOPT_STEPS = 8 - $N_SOBOL_STEPS"
+N_BAYESOPT_STEPS=8
 
 # Directory structure
 cd /home/tab53/rds/rds-ukaea-ap002-mOlK9qn0PlQ/tab53/jetto-mobo/examples/ecrh_q_optimisation
@@ -35,8 +37,8 @@ OUTPUT_DIR=data/sum_of_gaussians
 # Save command as a variable, using 'here document' syntax
 read -r -d '' COMMAND <<- EOM
 $CONDA_PREFIX/bin/python main.py \
---batch_size $SLURM_CPUS_PER_TASK \
---initial_batch_size $N_SOBOL_SAMPLES \
+--batch_size 32 \
+--initial_batch_size 32 \
 --n_iterations $N_BAYESOPT_STEPS \
 --output_dir $OUTPUT_DIR \
 --parameterisation sum_of_gaussians \
