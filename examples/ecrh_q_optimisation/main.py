@@ -18,7 +18,7 @@ from ecrh_inputs import (
     marsden_piecewise_linear_bounds,
     sum_of_gaussians_profile,
 )
-from q_objectives import q_vector_objective
+from q_objectives import q_vector_objective, q_scalar_objective
 from utils import write_to_file
 
 from jetto_mobo import acquisition, simulation, surrogate, utils
@@ -36,6 +36,7 @@ parser.add_argument(
 parser.add_argument("--jetto_timelimit", type=int, default=10400)
 parser.add_argument("--jetto_fail_value", type=float, default=0)
 parser.add_argument("--discard_failures", action="store_true")
+parser.add_argument("--single_objective", action="store_true")
 parser.add_argument("--sobol_only", action="store_true")
 parser.add_argument("--n_xrho_points", type=int, default=150)
 parser.add_argument("--batch_size", type=int, default=10)
@@ -60,7 +61,7 @@ parser.add_argument("--n_parameters", type=int, default=12)
 parser.add_argument("--invariance", choices=[None, "2_block_permutation"], default=None)
 parser.add_argument("--alpha", type=float, default=0.0)
 parser.add_argument("--seed", type=int, default=0)
-parser.add_argument("--jitter", type=float, default=1e-4)
+parser.add_argument("--jitter", type=float, default=1e-6)
 parser.add_argument("--resume", action="store_true")
 args = parser.parse_args()
 
@@ -73,7 +74,15 @@ if args.dtype != torch.float32:
     )
 
 # Objectives
-n_objectives = 6
+if args.single_objective:
+    n_objectives = 1
+    def objective_function(results: jetto_tools.results.JettoResults) -> np.ndarray:
+        return q_scalar_objective(results, weights=np.ones(6))
+    acquisition_function = acquisition.qLogNoisyExpectedImprovement
+else:
+    n_objectives = 6
+    objective_function = q_vector_objective
+    acquisition_function = acquisition.qNoisyExpectedHypervolumeImprovement
 
 # Input parameterisation
 if args.parameterisation == "piecewise_linear":
@@ -181,7 +190,7 @@ def evaluate(
             else:
                 converged_ecrh.append(profiles["QECE"][-1])
                 converged_q.append(profiles["Q"][-1])
-                objective_values.append(q_vector_objective(results))
+                objective_values.append(objective_function(results))
         else:
             logger.warning("JETTO failed to converge.")
             converged_ecrh.append(np.full(args.n_xrho_points, np.nan))
@@ -389,7 +398,7 @@ for optimisation_step in range(
             observed_inputs=ecrh_parameters,
             bounds=parameter_bounds,
             model=model,
-            acquisition_function=acquisition.qNoisyExpectedHypervolumeImprovement,
+            acquisition_function=acquisition_function,
             n_constraints=0,
             device=args.device,
             dtype=args.dtype,
