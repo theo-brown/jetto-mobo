@@ -207,11 +207,11 @@ def q_scalar_objective(results: JettoResults, weights: np.ndarray) -> np.ndarray
     Weighted sum of q_vector_objective.
     """
     v = q_vector_objective(results)
-    return v @ weights
+    return np.atleast_1d(v @ weights)
 
 
 def q_scalar_objective_from_cdf(
     profiles: Dataset, timetraces: Dataset, weights: np.ndarray
 ) -> np.ndarray:
     v = q_vector_objective_from_cdf(profiles, timetraces)
-    return v @ weights
+    return np.atleast_1d(v @ weights)
